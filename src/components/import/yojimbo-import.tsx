@@ -258,10 +258,15 @@ export function YojimboImport() {
               <dd className="font-medium text-green-600">{summary.actuallyImported}</dd>
             </div>
             {summary.encrypted > 0 && (
-              <div className="flex justify-between">
-                <dt className="text-neutral-500">Encrypted (skipped)</dt>
-                <dd className="font-medium text-amber-600">{summary.encrypted}</dd>
-              </div>
+              <>
+                <div className="flex justify-between">
+                  <dt className="text-neutral-500">Encrypted (skipped)</dt>
+                  <dd className="font-medium text-amber-600">{summary.encrypted}</dd>
+                </div>
+                <p className="text-xs text-neutral-400 pl-1">
+                  Encrypted items require Yojimbo to decrypt. Use the AppleScript exporter to import them separately.
+                </p>
+              </>
             )}
             <div className="flex justify-between">
               <dt className="text-neutral-500">Labels imported</dt>
