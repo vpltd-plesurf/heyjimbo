@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { Upload, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
+import { Upload, CheckCircle, AlertCircle, Loader2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { parseYojimboZip, type YojimboItem, type YojimboLabel } from "@/lib/import/yojimbo-parser";
 
@@ -14,13 +14,17 @@ interface ImportSummary {
   byType: Record<string, number>;
 }
 
-const BATCH_SIZE = 20;
+const TEXT_BATCH_SIZE = 20;
+const FILE_BATCH_SIZE = 3; // Smaller batches for items with binary data
 
 export function YojimboImport() {
   const [status, setStatus] = useState<"idle" | "uploading" | "success" | "error">("idle");
   const [summary, setSummary] = useState<ImportSummary | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
   const [progress, setProgress] = useState("");
+  const [cleanImport, setCleanImport] = useState(true);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const sendBatch = async (body: { items?: YojimboItem[]; labels?: YojimboLabel[] }) => {
@@ -39,12 +43,21 @@ export function YojimboImport() {
   const handleUpload = async (file: File) => {
     setStatus("uploading");
     setErrorMessage("");
-    setProgress("Reading ZIP file...");
 
     try {
+      // Wipe existing data if clean import
+      if (cleanImport) {
+        setProgress("Wiping existing data...");
+        const wipeRes = await fetch("/api/items/wipe", { method: "POST" });
+        if (!wipeRes.ok) {
+          throw new Error("Failed to wipe existing data");
+        }
+      }
+
       // 1. Parse ZIP client-side
+      setProgress("Reading ZIP file...");
       const buffer = await file.arrayBuffer();
-      setProgress("Parsing database...");
+      setProgress("Parsing database & extracting files...");
       const result = await parseYojimboZip(buffer);
 
       // 2. Send labels first
@@ -55,16 +68,27 @@ export function YojimboImport() {
         labelsImported = result.labels.length;
       }
 
-      // 3. Send items in batches
-      let totalImported = 0;
+      // 3. Split items into text-only and file-bearing groups
+      const textItems = result.items.filter(i => !i.file_data);
+      const fileItems = result.items.filter(i => i.file_data);
       const totalItems = result.items.length;
+      let totalImported = 0;
+      let itemsSent = 0;
 
-      for (let i = 0; i < totalItems; i += BATCH_SIZE) {
-        const batch = result.items.slice(i, i + BATCH_SIZE);
-        const batchNum = Math.floor(i / BATCH_SIZE) + 1;
-        const totalBatches = Math.ceil(totalItems / BATCH_SIZE);
-        setProgress(`Importing items... batch ${batchNum}/${totalBatches} (${Math.min(i + BATCH_SIZE, totalItems)}/${totalItems})`);
+      // Send text items in larger batches
+      for (let i = 0; i < textItems.length; i += TEXT_BATCH_SIZE) {
+        const batch = textItems.slice(i, i + TEXT_BATCH_SIZE);
+        itemsSent += batch.length;
+        setProgress(`Importing items... ${itemsSent}/${totalItems}`);
+        const batchResult = await sendBatch({ items: batch });
+        totalImported += batchResult.imported || 0;
+      }
 
+      // Send file items in smaller batches (large payloads)
+      for (let i = 0; i < fileItems.length; i += FILE_BATCH_SIZE) {
+        const batch = fileItems.slice(i, i + FILE_BATCH_SIZE);
+        itemsSent += batch.length;
+        setProgress(`Uploading files... ${itemsSent}/${totalItems}`);
         const batchResult = await sendBatch({ items: batch });
         totalImported += batchResult.imported || 0;
       }
@@ -87,8 +111,21 @@ export function YojimboImport() {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
+    if (!file) return;
+
+    if (cleanImport) {
+      setPendingFile(file);
+      setShowConfirm(true);
+    } else {
       handleUpload(file);
+    }
+  };
+
+  const confirmAndUpload = () => {
+    setShowConfirm(false);
+    if (pendingFile) {
+      handleUpload(pendingFile);
+      setPendingFile(null);
     }
   };
 
@@ -98,29 +135,82 @@ export function YojimboImport() {
         Import from Yojimbo
       </h2>
       <p className="text-sm text-neutral-500 mb-6">
-        Upload your Yojimbo backup ZIP file to import your items and labels.
-        The file is parsed locally in your browser — only item data is sent to the server.
+        Upload your Yojimbo backup ZIP file to import all items — notes, bookmarks, passwords, images, and PDFs.
+        The file is parsed locally in your browser.
       </p>
 
       {status === "idle" && (
-        <div
-          className="border-2 border-dashed border-border rounded-xl p-8 text-center cursor-pointer hover:border-primary transition-colors"
-          onClick={() => fileInputRef.current?.click()}
-        >
-          <Upload className="w-8 h-8 mx-auto text-neutral-400 mb-3" />
-          <p className="text-sm text-neutral-500 mb-1">
-            Click to select your Yojimbo backup ZIP
-          </p>
-          <p className="text-xs text-neutral-400">
-            .zip file containing Database.sqlite
-          </p>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".zip"
-            onChange={handleFileChange}
-            className="hidden"
-          />
+        <>
+          {/* Clean import toggle */}
+          <label className="flex items-center gap-3 mb-4 p-3 rounded-xl border border-border bg-surface cursor-pointer hover:bg-surface-hover transition-colors">
+            <input
+              type="checkbox"
+              checked={cleanImport}
+              onChange={(e) => setCleanImport(e.target.checked)}
+              className="w-4 h-4 rounded accent-primary"
+            />
+            <div className="flex-1">
+              <span className="text-sm font-medium text-foreground flex items-center gap-1.5">
+                <Trash2 className="w-3.5 h-3.5" />
+                Clean import
+              </span>
+              <p className="text-xs text-neutral-400 mt-0.5">
+                Delete all existing items, labels, and attachments before importing
+              </p>
+            </div>
+          </label>
+
+          <div
+            className="border-2 border-dashed border-border rounded-xl p-8 text-center cursor-pointer hover:border-primary transition-colors"
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <Upload className="w-8 h-8 mx-auto text-neutral-400 mb-3" />
+            <p className="text-sm text-neutral-500 mb-1">
+              Click to select your Yojimbo backup ZIP
+            </p>
+            <p className="text-xs text-neutral-400">
+              .zip file containing Database.sqlite
+            </p>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".zip"
+              onChange={handleFileChange}
+              className="hidden"
+            />
+          </div>
+        </>
+      )}
+
+      {/* Confirmation dialog */}
+      {showConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-surface rounded-2xl p-6 max-w-sm w-full shadow-xl border border-border">
+            <h3 className="font-semibold text-foreground mb-2">Delete all existing data?</h3>
+            <p className="text-sm text-neutral-500 mb-4">
+              This will permanently delete all your items, labels, attachments, and activity history before importing. This cannot be undone.
+            </p>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-1"
+                onClick={() => {
+                  setShowConfirm(false);
+                  setPendingFile(null);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                className="flex-1 bg-rose-600 hover:bg-rose-700 text-white"
+                onClick={confirmAndUpload}
+              >
+                Delete & Import
+              </Button>
+            </div>
+          </div>
         </div>
       )}
 

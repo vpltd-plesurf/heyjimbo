@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import { logActivity } from "@/lib/activity";
 
 const ITEM_SELECT = `
   *,
@@ -206,6 +207,16 @@ export async function PUT(
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
+    // Log activity
+    let action = "update";
+    if (is_trashed === true) action = "trash";
+    else if (is_trashed === false && body.is_trashed !== undefined) action = "restore";
+    else if (is_flagged === true) action = "flag";
+    else if (is_flagged === false && body.is_flagged !== undefined) action = "unflag";
+    else if (is_pinned === true) action = "pin";
+    else if (is_pinned === false && body.is_pinned !== undefined) action = "unpin";
+    logActivity(supabase, user.id, action, data.id, data.name, data.type);
+
     return NextResponse.json(data);
   } catch (error) {
     console.error("Error updating item:", error);
@@ -232,6 +243,14 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Fetch item name before deleting
+    const { data: item } = await supabase
+      .from("items")
+      .select("name, type")
+      .eq("id", id)
+      .eq("user_id", user.id)
+      .single();
+
     const { error } = await supabase
       .from("items")
       .delete()
@@ -241,6 +260,8 @@ export async function DELETE(
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
+
+    logActivity(supabase, user.id, "delete", null, item?.name, item?.type);
 
     return NextResponse.json({ success: true });
   } catch (error) {

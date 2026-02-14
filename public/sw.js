@@ -1,4 +1,4 @@
-const CACHE_NAME = "heyjimbo-v1";
+const CACHE_NAME = "heyjimbo-v2";
 const PRECACHE_URLS = ["/dashboard", "/login"];
 
 self.addEventListener("install", (event) => {
@@ -20,12 +20,12 @@ self.addEventListener("activate", (event) => {
 });
 
 self.addEventListener("fetch", (event) => {
-  // Network-first strategy for API calls
+  // Skip API calls
   if (event.request.url.includes("/api/")) {
     return;
   }
 
-  // Cache-first for static assets, network-first for pages
+  // Cache-first for static assets
   if (
     event.request.destination === "image" ||
     event.request.destination === "font" ||
@@ -39,6 +39,16 @@ self.addEventListener("fetch", (event) => {
           caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
           return response;
         });
+      })
+    );
+    return;
+  }
+
+  // Network-first for navigation requests with offline fallback
+  if (event.request.mode === "navigate") {
+    event.respondWith(
+      fetch(event.request).catch(() => {
+        return caches.match("/dashboard") || caches.match("/login");
       })
     );
   }

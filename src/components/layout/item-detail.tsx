@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Flag, Trash2, RotateCcw, X, Lock, Unlock, Pin } from "lucide-react";
+import { Flag, Trash2, RotateCcw, X, Lock, Unlock, Pin, ImageIcon, FileDown, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -365,6 +365,7 @@ export function ItemDetail({
                   markDirty();
                 }}
                 editable={!item.is_trashed}
+                itemId={item.id}
               />
             )}
 
@@ -421,6 +422,10 @@ export function ItemDetail({
                 disabled={item.is_trashed}
               />
             )}
+
+            {(item.type === "image" || item.type === "pdf") && (
+              <ImagePdfViewer itemId={item.id} type={item.type} />
+            )}
           </div>
 
           {/* Status indicator */}
@@ -429,11 +434,86 @@ export function ItemDetail({
           )}
         </div>
 
-        {/* Attachments (production only, non-folder items) */}
-        {!isDemo && item.type !== "folder" && (
+        {/* Attachments (production only, non-folder/image/pdf items) */}
+        {!isDemo && item.type !== "folder" && item.type !== "image" && item.type !== "pdf" && (
           <AttachmentList itemId={item.id} />
         )}
       </motion.div>
     </AnimatePresence>
+  );
+}
+
+function ImagePdfViewer({ itemId, type }: { itemId: string; type: string }) {
+  const [url, setUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [fileName, setFileName] = useState("");
+
+  useEffect(() => {
+    setLoading(true);
+    setUrl(null);
+    fetch(`/api/attachments?item_id=${itemId}`)
+      .then(r => r.json())
+      .then(attachments => {
+        if (attachments?.length > 0) {
+          const att = attachments[0];
+          setFileName(att.file_name);
+          return fetch(`/api/attachments/url?path=${encodeURIComponent(att.storage_path)}`);
+        }
+        return null;
+      })
+      .then(r => r?.json())
+      .then(data => {
+        if (data?.url) setUrl(data.url);
+      })
+      .finally(() => setLoading(false));
+  }, [itemId]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="w-6 h-6 animate-spin text-neutral-400" />
+      </div>
+    );
+  }
+
+  if (!url) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 text-neutral-400">
+        {type === "image" ? <ImageIcon className="w-10 h-10 mb-2" /> : <FileDown className="w-10 h-10 mb-2" />}
+        <p className="text-sm">No file attached</p>
+      </div>
+    );
+  }
+
+  if (type === "image") {
+    return (
+      <div className="flex-1 overflow-y-auto">
+        <img
+          src={url}
+          alt={fileName}
+          className="max-w-full rounded-lg border border-border"
+        />
+      </div>
+    );
+  }
+
+  // PDF
+  return (
+    <div className="flex-1 flex flex-col gap-3">
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex items-center gap-2 text-primary hover:underline text-sm"
+      >
+        <FileDown className="w-4 h-4" />
+        Open {fileName || "PDF"}
+      </a>
+      <iframe
+        src={url}
+        className="flex-1 min-h-[400px] rounded-lg border border-border"
+        title={fileName}
+      />
+    </div>
   );
 }

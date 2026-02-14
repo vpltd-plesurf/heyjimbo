@@ -1,13 +1,14 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { format, isValid } from "date-fns";
-import { FileText, Flag, Globe, Lock, Hash, KeyRound, Folder, X, CheckSquare, Square, Trash2, FolderInput, Tag, ArrowUpDown, Pin } from "lucide-react";
+import { FileText, Flag, Globe, Lock, Hash, KeyRound, Folder, X, CheckSquare, Square, Trash2, FolderInput, Tag, ArrowUpDown, Pin, Copy, ImageIcon, FileDown } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { GuideTip } from "@/components/guide/guide-tip";
 import type { Item, Label } from "@/types/item";
+import { findDuplicates } from "@/lib/utils/similarity";
 
 export type { Item };
 
@@ -18,6 +19,9 @@ const typeIcons: Record<string, typeof FileText> = {
   serial_number: Hash,
   software_license: KeyRound,
   folder: Folder,
+  image: ImageIcon,
+  pdf: FileDown,
+  web_archive: Globe,
 };
 
 function getPreview(item: Item): string {
@@ -38,6 +42,12 @@ function getPreview(item: Item): string {
   }
   if (item.type === "folder") {
     return "Folder";
+  }
+  if (item.type === "image") {
+    return "Image";
+  }
+  if (item.type === "pdf") {
+    return "PDF document";
   }
   return "No content";
 }
@@ -93,6 +103,14 @@ export function ItemList({
   const [showBulkLabelMenu, setShowBulkLabelMenu] = useState(false);
   const [showBulkMoveMenu, setShowBulkMoveMenu] = useState(false);
   const [showSortMenu, setShowSortMenu] = useState(false);
+  const [showDuplicates, setShowDuplicates] = useState(false);
+
+  const duplicates = useMemo(() => {
+    if (items.length < 2 || items.length > 500) return [];
+    return findDuplicates(items);
+  }, [items]);
+
+  const duplicateIds = useMemo(() => new Set(duplicates.map(d => d.id)), [duplicates]);
 
   const selectionMode = selectedIds.size > 0;
 
@@ -247,6 +265,19 @@ export function ItemList({
           </div>
         )}
       </div>
+
+      {/* Duplicate Detection Banner */}
+      {duplicates.length > 0 && !selectionMode && (
+        <div className="px-3 py-1.5 border-b border-border">
+          <button
+            onClick={() => setShowDuplicates(!showDuplicates)}
+            className="flex items-center gap-1.5 text-xs text-amber-600 hover:text-amber-700 transition-colors duration-150"
+          >
+            <Copy className="w-3 h-3" />
+            {duplicates.length} possible duplicate{duplicates.length !== 1 ? "s" : ""}
+          </button>
+        </div>
+      )}
 
       {/* Bulk Action Bar */}
       {selectionMode && (
@@ -427,7 +458,8 @@ export function ItemList({
                         : isSelected
                         ? "bg-primary-lighter ring-1 ring-primary/30"
                         : "bg-surface hover:bg-surface-hover",
-                      isDragOver && "bg-primary-lighter ring-2 ring-primary/40"
+                      isDragOver && "bg-primary-lighter ring-2 ring-primary/40",
+                      showDuplicates && duplicateIds.has(item.id) && "ring-1 ring-amber-400/50"
                     )}
                   >
                     <div className="flex items-start gap-2">

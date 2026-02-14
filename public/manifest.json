@@ -1,17 +1,32 @@
 {
   "name": "HeyJimbo",
   "short_name": "HeyJimbo",
-  "description": "Personal information organizer",
+  "description": "Personal information organizer — notes, bookmarks, passwords & more",
   "start_url": "/dashboard",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#6366f1",
+  "theme_color": "#8b7ec8",
   "icons": [
     {
       "src": "/icon.svg",
       "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }

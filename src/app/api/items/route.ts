@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import { logActivity } from "@/lib/activity";
 
 const ITEM_SELECT = `
   *,
@@ -62,8 +63,15 @@ export async function GET(request: Request) {
       query = query.eq("is_trashed", false);
     }
     if (search) {
-      // Use ilike for partial matching (more forgiving than full-text search)
-      query = query.ilike("name", `%${search}%`);
+      const trimmed = search.trim();
+      if (trimmed.length >= 3) {
+        // Full-text search across name + content via search_vector
+        const tsQuery = trimmed.split(/\s+/).map(w => `${w}:*`).join(" & ");
+        query = query.textSearch("search_vector", tsQuery);
+      } else {
+        // Short queries: use ilike for partial matching
+        query = query.ilike("name", `%${trimmed}%`);
+      }
     }
     if (cursor) {
       if (ascending) {
@@ -178,6 +186,8 @@ export async function POST(request: Request) {
     if (fetchError) {
       return NextResponse.json({ error: fetchError.message }, { status: 500 });
     }
+
+    logActivity(supabase, user.id, "create", completeItem.id, completeItem.name, completeItem.type);
 
     return NextResponse.json(completeItem, { status: 201 });
   } catch (error) {

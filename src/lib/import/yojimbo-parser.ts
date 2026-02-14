@@ -24,6 +24,10 @@ export interface YojimboItem {
   owner_name?: string;
   owner_email?: string;
   organization?: string;
+  // Binary file data (images, PDFs)
+  file_data?: string; // base64
+  file_name?: string;
+  content_type?: string;
 }
 
 export interface YojimboLabel {
@@ -137,7 +141,11 @@ function isCocoaMetadata(s: string): boolean {
 }
 
 // Z_ENT type mapping (based on actual Yojimbo data analysis)
+// 17=ImageArchive, 18=Note, 19=PDFArchive, 20=WebArchive, 21=Password, 22=SerialNumber, 23=WebBookmark
 function mapEntityType(zEnt: number, item: Record<string, unknown>): string {
+  if (zEnt === 17) return "image";
+  if (zEnt === 19) return "pdf";
+  if (zEnt === 20) return "web_archive";
   if (item.ZURLSTRING) return "bookmark";
   if (item.ZSERIALNUMBER) return "serial_number";
   if (item.ZENCRYPTEDPASSWORD || (item.ZLOCATION && item.ZACCOUNT)) return "password";
@@ -154,7 +162,60 @@ function extractLabels(db: Database): YojimboLabel[] {
   }));
 }
 
-function extractItems(db: Database): YojimboItem[] {
+/**
+ * Extract a UUID from a 0x02-prefixed ZBYTES blob.
+ * The UUID is typically stored as 16 raw bytes after the prefix,
+ * or as a UUID string in the blob.
+ */
+function extractUuidFromBlob(bytes: Uint8Array): string | null {
+  if (bytes.length < 17 || bytes[0] !== 0x02) return null;
+
+  // Try reading 16 raw bytes as UUID (bytes 1-16)
+  const hex = Array.from(bytes.slice(1, 17))
+    .map(b => b.toString(16).padStart(2, "0"))
+    .join("");
+  if (hex.length === 32) {
+    return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`.toUpperCase();
+  }
+  return null;
+}
+
+/**
+ * Build a map of UUID → ZIP file path for files in _EXTERNAL_DATA/ or similar.
+ */
+function buildFileMap(zip: JSZip): Map<string, string> {
+  const map = new Map<string, string>();
+  zip.forEach((path, file) => {
+    if (file.dir || path.includes("/._")) return;
+    // Extract UUID-like patterns from the path (last segment before extension)
+    const segments = path.split("/");
+    const fileName = segments[segments.length - 1];
+    // Yojimbo stores files with UUID-based names
+    const uuidMatch = fileName.match(/([0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12})/);
+    if (uuidMatch) {
+      map.set(uuidMatch[1].toUpperCase(), path);
+    }
+    // Also index by the full filename (without extension) in case it's a raw UUID
+    const nameNoExt = fileName.replace(/\.[^.]+$/, "");
+    if (nameNoExt.length >= 32) {
+      map.set(nameNoExt.toUpperCase(), path);
+    }
+  });
+  return map;
+}
+
+function guessContentType(name: string): string {
+  const ext = name.split(".").pop()?.toLowerCase() || "";
+  const types: Record<string, string> = {
+    jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png",
+    gif: "image/gif", webp: "image/webp", svg: "image/svg+xml",
+    tiff: "image/tiff", tif: "image/tiff", bmp: "image/bmp",
+    pdf: "application/pdf", webarchive: "application/x-webarchive",
+  };
+  return types[ext] || "application/octet-stream";
+}
+
+async function extractItems(db: Database, zip: JSZip): Promise<YojimboItem[]> {
   // Build label lookup
   const labelResults = db.exec("SELECT Z_PK, ZNAME FROM ZLABEL");
   const labelMap = new Map<number, string>();
@@ -182,7 +243,10 @@ function extractItems(db: Database): YojimboItem[] {
 
   if (itemResults.length === 0) return [];
 
-  return itemResults[0].values.map((row) => {
+  const fileMap = buildFileMap(zip);
+
+  const items: YojimboItem[] = [];
+  for (const row of itemResults[0].values) {
     const zEnt = row[1] as number;
     const encrypted = (row[3] as number) === 1;
     const itemData: Record<string, unknown> = {
@@ -195,24 +259,79 @@ function extractItems(db: Database): YojimboItem[] {
 
     const type = mapEntityType(zEnt, itemData);
     const labelPk = row[6] as number | null;
+    const itemName = (row[2] as string) || "Untitled";
 
     // Try ZBLOBSTRINGREP first, fall back to extracting from ZBYTES bplist
     let content = "";
+    let file_data: string | undefined;
+    let file_name: string | undefined;
+    let content_type: string | undefined;
+
     if (!encrypted) {
-      const stringRep = row[17] as string | null;
-      if (stringRep) {
-        content = stringRep;
+      const rawBytes = row[18] as Uint8Array | null;
+
+      if (type === "image" || type === "pdf") {
+        // Binary file type — resolve from ZIP via UUID
+        if (rawBytes && rawBytes[0] === 0x02) {
+          const uuid = extractUuidFromBlob(rawBytes);
+          if (uuid) {
+            const zipPath = fileMap.get(uuid);
+            if (zipPath) {
+              const zipFile = zip.file(zipPath);
+              if (zipFile) {
+                const fileBytes = await zipFile.async("base64");
+                file_data = fileBytes;
+                file_name = itemName.includes(".") ? itemName : `${itemName}.${type === "pdf" ? "pdf" : "jpg"}`;
+                content_type = guessContentType(file_name);
+              }
+            }
+          }
+        }
+        // Also try scanning ZIP for file matching the item name
+        if (!file_data) {
+          let found = false;
+          zip.forEach((path, file) => {
+            if (found || file.dir || path.includes("/._")) return;
+            const segments = path.split("/");
+            const fname = segments[segments.length - 1];
+            if (fname === itemName || fname.startsWith(itemName.replace(/\.[^.]+$/, ""))) {
+              found = true;
+              file_name = fname;
+              content_type = guessContentType(fname);
+            }
+          });
+          if (found && file_name) {
+            const matchPath = Object.keys(zip.files).find(p => p.endsWith(file_name!));
+            if (matchPath) {
+              const zipFile = zip.file(matchPath);
+              if (zipFile) {
+                file_data = await zipFile.async("base64");
+              }
+            }
+          }
+        }
+      } else if (type === "web_archive") {
+        // Web archives: extract any text, treat as note
+        const stringRep = row[17] as string | null;
+        if (stringRep) {
+          content = stringRep;
+        } else if (rawBytes) {
+          content = extractTextFromBplist(rawBytes) || "";
+        }
       } else {
-        const rawBytes = row[18] as Uint8Array | null;
-        if (rawBytes) {
+        // Text-based types
+        const stringRep = row[17] as string | null;
+        if (stringRep) {
+          content = stringRep;
+        } else if (rawBytes) {
           content = extractTextFromBplist(rawBytes) || "";
         }
       }
     }
 
-    return {
-      name: (row[2] as string) || "Untitled",
-      type,
+    items.push({
+      name: itemName,
+      type: type === "web_archive" ? "note" : type, // web archives become notes
       content,
       is_flagged: (row[4] as number) === 1,
       is_trashed: (row[5] as number) === 1,
@@ -229,8 +348,12 @@ function extractItems(db: Database): YojimboItem[] {
       owner_name: (row[14] as string) || undefined,
       owner_email: (row[15] as string) || undefined,
       organization: (row[16] as string) || undefined,
-    };
-  });
+      file_data,
+      file_name,
+      content_type,
+    });
+  }
+  return items;
 }
 
 export async function parseYojimboZip(buffer: ArrayBuffer): Promise<YojimboParseResult> {
@@ -258,7 +381,7 @@ export async function parseYojimboZip(buffer: ArrayBuffer): Promise<YojimboParse
 
   try {
     const labels = extractLabels(db);
-    const allItems = extractItems(db);
+    const allItems = await extractItems(db, zip);
 
     const encrypted = allItems.filter((i) => i.is_encrypted);
     const importable = allItems.filter((i) => !i.is_encrypted);

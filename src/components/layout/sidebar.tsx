@@ -18,6 +18,7 @@ import {
   Import,
   Download,
   BarChart3,
+  Activity,
   Sun,
   Moon,
 } from "lucide-react";
@@ -267,6 +268,15 @@ export function Sidebar({
             >
               <Download className="w-4 h-4 mr-2" />
               Export
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => router.push("/dashboard/activity")}
+              className="w-full justify-start text-neutral-500"
+            >
+              <Activity className="w-4 h-4 mr-2" />
+              Activity
             </Button>
             <Button
               variant="ghost"
