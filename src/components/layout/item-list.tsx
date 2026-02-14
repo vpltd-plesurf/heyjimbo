@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { format, isValid } from "date-fns";
-import { FileText, Flag, Globe, Lock, Hash, KeyRound, Folder, X, CheckSquare, Square, Trash2, FolderInput, Tag } from "lucide-react";
+import { FileText, Flag, Globe, Lock, Hash, KeyRound, Folder, X, CheckSquare, Square, Trash2, FolderInput, Tag, ArrowUpDown, Pin } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -60,6 +60,9 @@ interface ItemListProps {
   onBulkMove?: (ids: string[], folderId: string) => void;
   allLabels?: Label[];
   folders?: Item[];
+  sortBy?: string;
+  sortDir?: string;
+  onSortChange?: (sort: string, dir: string) => void;
 }
 
 export function ItemList({
@@ -80,12 +83,16 @@ export function ItemList({
   onBulkMove,
   allLabels = [],
   folders = [],
+  sortBy = "updated_at",
+  sortDir = "desc",
+  onSortChange,
 }: ItemListProps) {
   const sentinelRef = useRef<HTMLDivElement>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showBulkLabelMenu, setShowBulkLabelMenu] = useState(false);
   const [showBulkMoveMenu, setShowBulkMoveMenu] = useState(false);
+  const [showSortMenu, setShowSortMenu] = useState(false);
 
   const selectionMode = selectedIds.size > 0;
 
@@ -197,6 +204,48 @@ export function ItemList({
           </p>
         )}
         </GuideTip>
+        {/* Sort dropdown */}
+        {onSortChange && (
+          <div className="relative mt-2">
+            <button
+              onClick={() => setShowSortMenu(!showSortMenu)}
+              className="flex items-center gap-1 text-xs text-neutral-400 hover:text-neutral-600 transition-colors duration-150"
+            >
+              <ArrowUpDown className="w-3 h-3" />
+              {sortBy === "updated_at" ? "Last Modified" : sortBy === "created_at" ? "Date Created" : sortBy === "name" && sortDir === "asc" ? "Name A-Z" : sortBy === "name" ? "Name Z-A" : "Type"}
+            </button>
+            {showSortMenu && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setShowSortMenu(false)} />
+                <div className="absolute left-0 top-full mt-1 z-20 bg-surface border border-border rounded-xl shadow-card-hover p-1 min-w-[140px]">
+                  {[
+                    { label: "Last Modified", sort: "updated_at", dir: "desc" },
+                    { label: "Date Created", sort: "created_at", dir: "desc" },
+                    { label: "Name A-Z", sort: "name", dir: "asc" },
+                    { label: "Name Z-A", sort: "name", dir: "desc" },
+                    { label: "Type", sort: "type", dir: "asc" },
+                  ].map((opt) => (
+                    <button
+                      key={opt.label}
+                      onClick={() => {
+                        onSortChange(opt.sort, opt.dir);
+                        setShowSortMenu(false);
+                      }}
+                      className={cn(
+                        "w-full text-left px-2 py-1.5 text-xs rounded-lg transition-colors duration-150",
+                        sortBy === opt.sort && sortDir === opt.dir
+                          ? "bg-primary-lighter text-primary font-medium"
+                          : "hover:bg-surface-hover"
+                      )}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Bulk Action Bar */}
@@ -398,6 +447,9 @@ export function ItemList({
                           <span className="font-medium text-[15px] text-foreground truncate">
                             {item.name}
                           </span>
+                          {item.is_pinned && (
+                            <Pin className="w-3 h-3 text-primary flex-shrink-0" />
+                          )}
                           {item.is_flagged && (
                             <Flag className="w-3 h-3 text-orange-500 flex-shrink-0" />
                           )}

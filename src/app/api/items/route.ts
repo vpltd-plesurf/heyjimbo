@@ -29,14 +29,26 @@ export async function GET(request: Request) {
     const search = searchParams.get("search");
     const cursor = searchParams.get("cursor");
     const folderId = searchParams.get("folder");
+    const sort = searchParams.get("sort") || "updated_at";
+    const sortDir = searchParams.get("sort_dir") || "desc";
     const limit = Math.min(parseInt(searchParams.get("limit") || "50", 10), 100);
+
+    const validSorts: Record<string, string> = {
+      updated_at: "updated_at",
+      created_at: "created_at",
+      name: "name",
+      type: "type",
+    };
+    const sortColumn = validSorts[sort] || "updated_at";
+    const ascending = sortDir === "asc";
 
     let query = supabase
       .from("items")
       .select(ITEM_SELECT)
       .eq("user_id", user.id)
-      .order("updated_at", { ascending: false })
-      .limit(limit + 1); // Fetch one extra to determine if there are more
+      .order("is_pinned", { ascending: false })
+      .order(sortColumn, { ascending })
+      .limit(limit + 1);
 
     if (type) {
       query = query.eq("type", type);
@@ -46,15 +58,6 @@ export async function GET(request: Request) {
     }
     if (isTrashed === "true") {
       query = query.eq("is_trashed", true);
-      // Auto-cleanup: delete items trashed more than 30 days ago
-      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-      supabase
-        .from("items")
-        .delete()
-        .eq("user_id", user.id)
-        .eq("is_trashed", true)
-        .lt("trashed_at", thirtyDaysAgo)
-        .then(() => {}); // fire-and-forget
     } else {
       query = query.eq("is_trashed", false);
     }
@@ -63,7 +66,11 @@ export async function GET(request: Request) {
       query = query.ilike("name", `%${search}%`);
     }
     if (cursor) {
-      query = query.lt("updated_at", cursor);
+      if (ascending) {
+        query = query.gt(sortColumn, cursor);
+      } else {
+        query = query.lt(sortColumn, cursor);
+      }
     }
     // Folder filtering — only when not searching/filtering by type/flag/trash
     if (folderId) {
@@ -80,7 +87,7 @@ export async function GET(request: Request) {
 
     const hasMore = data.length > limit;
     const items = hasMore ? data.slice(0, limit) : data;
-    const nextCursor = hasMore ? items[items.length - 1].updated_at : null;
+    const nextCursor = hasMore ? items[items.length - 1][sortColumn] : null;
 
     return NextResponse.json({ items, nextCursor });
   } catch (error) {

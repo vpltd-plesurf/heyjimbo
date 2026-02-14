@@ -7,6 +7,7 @@ export const DEMO_SEED_ITEMS: Item[] = [
     type: "note",
     is_flagged: true,
     is_trashed: false,
+    is_pinned: false,
     created_at: "2026-02-14T10:00:00Z",
     updated_at: "2026-02-14T10:00:00Z",
     note_content: {
@@ -21,6 +22,7 @@ export const DEMO_SEED_ITEMS: Item[] = [
     type: "note",
     is_flagged: false,
     is_trashed: false,
+    is_pinned: false,
     created_at: "2026-02-13T14:30:00Z",
     updated_at: "2026-02-13T16:45:00Z",
     note_content: {
@@ -35,6 +37,7 @@ export const DEMO_SEED_ITEMS: Item[] = [
     type: "note",
     is_flagged: true,
     is_trashed: false,
+    is_pinned: false,
     created_at: "2026-02-12T09:00:00Z",
     updated_at: "2026-02-14T08:15:00Z",
     note_content: {
@@ -49,6 +52,7 @@ export const DEMO_SEED_ITEMS: Item[] = [
     type: "note",
     is_flagged: false,
     is_trashed: false,
+    is_pinned: false,
     created_at: "2026-02-10T20:00:00Z",
     updated_at: "2026-02-11T11:30:00Z",
     note_content: {
@@ -63,6 +67,7 @@ export const DEMO_SEED_ITEMS: Item[] = [
     type: "bookmark",
     is_flagged: false,
     is_trashed: false,
+    is_pinned: false,
     created_at: "2026-02-13T09:00:00Z",
     updated_at: "2026-02-13T09:00:00Z",
     bookmark_content: {
@@ -76,6 +81,7 @@ export const DEMO_SEED_ITEMS: Item[] = [
     type: "bookmark",
     is_flagged: true,
     is_trashed: false,
+    is_pinned: false,
     created_at: "2026-02-12T15:00:00Z",
     updated_at: "2026-02-12T15:00:00Z",
     bookmark_content: {
@@ -89,6 +95,7 @@ export const DEMO_SEED_ITEMS: Item[] = [
     type: "password",
     is_flagged: false,
     is_trashed: false,
+    is_pinned: false,
     created_at: "2026-02-11T12:00:00Z",
     updated_at: "2026-02-11T12:00:00Z",
     password_content: {
@@ -103,6 +110,7 @@ export const DEMO_SEED_ITEMS: Item[] = [
     type: "serial_number",
     is_flagged: false,
     is_trashed: false,
+    is_pinned: false,
     created_at: "2026-02-10T10:00:00Z",
     updated_at: "2026-02-10T10:00:00Z",
     serial_number_content: {

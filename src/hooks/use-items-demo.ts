@@ -95,6 +95,7 @@ export function useItemsDemo(filter: string, searchQuery: string) {
         type,
         is_flagged: false,
         is_trashed: false,
+        is_pinned: false,
         created_at: now,
         updated_at: now,
         note_content:

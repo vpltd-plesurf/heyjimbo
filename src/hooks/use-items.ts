@@ -16,6 +16,7 @@ interface UpdateItemData {
   name?: string;
   is_flagged?: boolean;
   is_trashed?: boolean;
+  is_pinned?: boolean;
   content?: string;
   content_format?: string;
   bookmark_url?: string;
@@ -35,7 +36,7 @@ interface UpdateItemData {
   parent_folder_id?: string | null;
 }
 
-export function useItems(filter: string, searchQuery: string, currentFolderId?: string | null) {
+export function useItems(filter: string, searchQuery: string, currentFolderId?: string | null, sortBy?: string, sortDir?: string) {
   // eslint-disable-next-line react-hooks/rules-of-hooks -- isDemoMode() is a build-time constant
   if (isDemoMode()) return useItemsDemo(filter, searchQuery);
   const [items, setItems] = useState<Item[]>([]);
@@ -65,12 +66,19 @@ export function useItems(filter: string, searchQuery: string, currentFolderId?: 
       params.set("folder", currentFolderId);
     }
 
+    if (sortBy) {
+      params.set("sort", sortBy);
+    }
+    if (sortDir) {
+      params.set("sort_dir", sortDir);
+    }
+
     if (cursor) {
       params.set("cursor", cursor);
     }
 
     return params.toString();
-  }, [filter, searchQuery, currentFolderId]);
+  }, [filter, searchQuery, currentFolderId, sortBy, sortDir]);
 
   // Abort controller ref to cancel stale requests
   const abortControllerRef = useRef<AbortController | null>(null);

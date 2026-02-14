@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Flag, Trash2, RotateCcw, X, Lock, Unlock } from "lucide-react";
+import { Flag, Trash2, RotateCcw, X, Lock, Unlock, Pin } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -206,6 +206,10 @@ export function ItemDetail({
     onUpdate(item.id, { is_flagged: !item.is_flagged });
   };
 
+  const handleTogglePin = () => {
+    onUpdate(item.id, { is_pinned: !item.is_pinned });
+  };
+
   const handleMoveToTrash = () => {
     onUpdate(item.id, { is_trashed: true });
   };
@@ -266,6 +270,15 @@ export function ItemDetail({
               <Flag className="w-4 h-4" />
             </Button>
             </GuideTip>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleTogglePin}
+              className={cn(item.is_pinned && "text-primary")}
+              title={item.is_pinned ? "Unpin" : "Pin to top"}
+            >
+              <Pin className="w-4 h-4" />
+            </Button>
             {item.is_trashed ? (
               <>
                 <Button variant="ghost" size="icon" onClick={handleRestore}>

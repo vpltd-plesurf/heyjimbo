@@ -161,7 +161,7 @@ export function Sidebar({
         >
           <div />
         </GuideTip>
-        {filters.map((filter) => {
+        {filters.map((filter, index) => {
           const Icon = filter.icon;
           const isActive = currentFilter === filter.id;
 
@@ -177,7 +177,10 @@ export function Sidebar({
               )}
             >
               <Icon className="w-4 h-4" />
-              {filter.label}
+              <span className="flex-1 text-left">{filter.label}</span>
+              <kbd className="text-[10px] text-neutral-400 font-mono opacity-60">
+                {"\u2318"}{index + 1}
+              </kbd>
             </button>
           );
         })}

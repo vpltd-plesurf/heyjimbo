@@ -28,6 +28,8 @@ export function ThreeColumnLayout() {
   const [viewportSize, setViewportSize] = useState<ViewportSize>("desktop");
   const [showSidebar, setShowSidebar] = useState(false);
   const [folderStack, setFolderStack] = useState<FolderBreadcrumb[]>([]);
+  const [sortBy, setSortBy] = useState("updated_at");
+  const [sortDir, setSortDir] = useState("desc");
 
   const currentFolderId = folderStack.length > 0 ? folderStack[folderStack.length - 1].id : null;
   const isMobile = viewportSize === "mobile";
@@ -53,7 +55,7 @@ export function ThreeColumnLayout() {
   }, [searchInput]);
 
   const { items, loading, loadingMore, hasMore, createItem, updateItem, deleteItem, fetchMore, refetch } =
-    useItems(currentFilter, debouncedSearch, currentFolderId);
+    useItems(currentFilter, debouncedSearch, currentFolderId, sortBy, sortDir);
 
   const {
     labels: allLabels,
@@ -249,6 +251,12 @@ export function ThreeColumnLayout() {
           setSelectedId(items[0].id);
         }
       },
+      onSidebarFilter: (index: number) => {
+        const filterIds = ["all", "note", "bookmark", "password", "serial_number", "software_license", "flagged", "trash"];
+        if (index < filterIds.length) {
+          setCurrentFilter(filterIds[index]);
+        }
+      },
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [selectedId, selectedItem, items, currentFilter, handleUpdate]
@@ -269,6 +277,12 @@ export function ThreeColumnLayout() {
     },
   };
 
+  // Sort handler
+  const handleSortChange = useCallback((newSort: string, newDir: string) => {
+    setSortBy(newSort);
+    setSortDir(newDir);
+  }, []);
+
   // Shared bulk action props for ItemList
   const bulkActionProps = {
     onBulkTrash: handleBulkTrash,
@@ -277,6 +291,9 @@ export function ThreeColumnLayout() {
     onBulkMove: handleBulkMove,
     allLabels,
     folders: folderItems,
+    sortBy,
+    sortDir,
+    onSortChange: handleSortChange,
   };
 
   // Breadcrumb component

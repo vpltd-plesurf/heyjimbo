@@ -10,6 +10,7 @@ interface KeyboardShortcutHandlers {
   onEscape: () => void;
   onNavigateUp: () => void;
   onNavigateDown: () => void;
+  onSidebarFilter?: (index: number) => void;
 }
 
 function isEditableTarget(target: EventTarget | null): boolean {
@@ -39,10 +40,17 @@ export function useKeyboardShortcuts(handlers: KeyboardShortcutHandlers) {
         return;
       }
 
-      // Cmd+F — focus search (works everywhere)
-      if (meta && e.key === "f") {
+      // Cmd+K or Cmd+F — focus search (works everywhere)
+      if (meta && (e.key === "f" || e.key === "k")) {
         e.preventDefault();
         handlers.onFocusSearch();
+        return;
+      }
+
+      // Cmd+1 through Cmd+8 — sidebar filter shortcuts
+      if (meta && !e.shiftKey && e.key >= "1" && e.key <= "8") {
+        e.preventDefault();
+        handlers.onSidebarFilter?.(parseInt(e.key) - 1);
         return;
       }
 

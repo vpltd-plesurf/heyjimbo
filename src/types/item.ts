@@ -36,6 +36,7 @@ export interface Item {
   type: string;
   is_flagged: boolean;
   is_trashed: boolean;
+  is_pinned: boolean;
   parent_folder_id?: string | null;
   created_at: string;
   updated_at: string;
