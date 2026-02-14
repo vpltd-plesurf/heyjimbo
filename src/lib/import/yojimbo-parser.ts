@@ -164,44 +164,68 @@ function extractLabels(db: Database): YojimboLabel[] {
 
 /**
  * Extract a UUID from a 0x02-prefixed ZBYTES blob.
- * The UUID is typically stored as 16 raw bytes after the prefix,
- * or as a UUID string in the blob.
+ * The UUID is stored as a null-terminated ASCII string after the 0x02 prefix byte.
+ * Format: 0x02 + "6AD254BE-37AD-47A2-8F68-C9050F50B132" + 0x00
  */
 function extractUuidFromBlob(bytes: Uint8Array): string | null {
-  if (bytes.length < 17 || bytes[0] !== 0x02) return null;
+  if (bytes.length < 10 || bytes[0] !== 0x02) return null;
 
-  // Try reading 16 raw bytes as UUID (bytes 1-16)
-  const hex = Array.from(bytes.slice(1, 17))
-    .map(b => b.toString(16).padStart(2, "0"))
-    .join("");
-  if (hex.length === 32) {
-    return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`.toUpperCase();
+  // Read ASCII string after prefix byte, stop at null terminator
+  let uuid = "";
+  for (let i = 1; i < bytes.length; i++) {
+    if (bytes[i] === 0x00) break;
+    uuid += String.fromCharCode(bytes[i]);
+  }
+
+  // Validate it looks like a UUID
+  if (/^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$/.test(uuid)) {
+    return uuid.toUpperCase();
   }
   return null;
 }
 
 /**
- * Build a map of UUID → ZIP file path for files in _EXTERNAL_DATA/ or similar.
+ * Build a map of UUID → ZIP file path for files in _EXTERNAL_DATA/.
+ * Yojimbo stores files as UUID-named files (no extension) in _EXTERNAL_DATA/.
  */
 function buildFileMap(zip: JSZip): Map<string, string> {
   const map = new Map<string, string>();
   zip.forEach((path, file) => {
     if (file.dir || path.includes("/._")) return;
-    // Extract UUID-like patterns from the path (last segment before extension)
+    // Match UUID pattern in filename
     const segments = path.split("/");
     const fileName = segments[segments.length - 1];
-    // Yojimbo stores files with UUID-based names
-    const uuidMatch = fileName.match(/([0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12})/);
+    const uuidMatch = fileName.match(/^([0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12})$/);
     if (uuidMatch) {
       map.set(uuidMatch[1].toUpperCase(), path);
     }
-    // Also index by the full filename (without extension) in case it's a raw UUID
-    const nameNoExt = fileName.replace(/\.[^.]+$/, "");
-    if (nameNoExt.length >= 32) {
-      map.set(nameNoExt.toUpperCase(), path);
-    }
   });
   return map;
+}
+
+/**
+ * Detect file type from magic bytes.
+ */
+function detectFileType(bytes: Uint8Array): string {
+  if (bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46) return "pdf"; // %PDF
+  if (bytes[0] === 0xFF && bytes[1] === 0xD8 && bytes[2] === 0xFF) return "jpg"; // JPEG
+  if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4E && bytes[3] === 0x47) return "png"; // PNG
+  if (bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46) return "gif"; // GIF
+  if (bytes[0] === 0x49 && bytes[1] === 0x49 && bytes[2] === 0x2A && bytes[3] === 0x00) return "tiff"; // TIFF LE
+  if (bytes[0] === 0x4D && bytes[1] === 0x4D && bytes[2] === 0x00 && bytes[3] === 0x2A) return "tiff"; // TIFF BE
+  if (bytes[0] === 0x42 && bytes[1] === 0x4D) return "bmp"; // BMP
+  return "png"; // default to png for unknown image
+}
+
+/**
+ * Convert Uint8Array to base64 in browser-compatible way.
+ */
+function uint8ToBase64(bytes: Uint8Array): string {
+  let binary = "";
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
 }
 
 function guessContentType(name: string): string {
@@ -257,7 +281,7 @@ async function extractItems(db: Database, zip: JSZip): Promise<YojimboItem[]> {
       ZSERIALNUMBER: row[13],
     };
 
-    const type = mapEntityType(zEnt, itemData);
+    let type = mapEntityType(zEnt, itemData);
     const labelPk = row[6] as number | null;
     const itemName = (row[2] as string) || "Untitled";
 
@@ -270,42 +294,28 @@ async function extractItems(db: Database, zip: JSZip): Promise<YojimboItem[]> {
     if (!encrypted) {
       const rawBytes = row[18] as Uint8Array | null;
 
-      if (type === "image" || type === "pdf") {
-        // Binary file type — resolve from ZIP via UUID
-        if (rawBytes && rawBytes[0] === 0x02) {
-          const uuid = extractUuidFromBlob(rawBytes);
-          if (uuid) {
-            const zipPath = fileMap.get(uuid);
-            if (zipPath) {
-              const zipFile = zip.file(zipPath);
-              if (zipFile) {
-                const fileBytes = await zipFile.async("base64");
-                file_data = fileBytes;
-                file_name = itemName.includes(".") ? itemName : `${itemName}.${type === "pdf" ? "pdf" : "jpg"}`;
+      // Check for file reference (0x02 prefix = UUID pointing to _EXTERNAL_DATA/)
+      // This can happen for ANY Z_ENT type — notes with images, PDFs, etc.
+      if (rawBytes && rawBytes[0] === 0x02) {
+        const uuid = extractUuidFromBlob(rawBytes);
+        if (uuid) {
+          const zipPath = fileMap.get(uuid);
+          if (zipPath) {
+            const zipFile = zip.file(zipPath);
+            if (zipFile) {
+              const fileBytes = await zipFile.async("uint8array");
+              file_data = uint8ToBase64(fileBytes);
+
+              // Detect actual file type from magic bytes
+              const detectedType = detectFileType(fileBytes);
+              if (detectedType === "pdf") {
+                type = "pdf";
+                file_name = `${itemName}.pdf`;
+                content_type = "application/pdf";
+              } else {
+                type = "image";
+                file_name = `${itemName}.${detectedType}`;
                 content_type = guessContentType(file_name);
-              }
-            }
-          }
-        }
-        // Also try scanning ZIP for file matching the item name
-        if (!file_data) {
-          let found = false;
-          zip.forEach((path, file) => {
-            if (found || file.dir || path.includes("/._")) return;
-            const segments = path.split("/");
-            const fname = segments[segments.length - 1];
-            if (fname === itemName || fname.startsWith(itemName.replace(/\.[^.]+$/, ""))) {
-              found = true;
-              file_name = fname;
-              content_type = guessContentType(fname);
-            }
-          });
-          if (found && file_name) {
-            const matchPath = Object.keys(zip.files).find(p => p.endsWith(file_name!));
-            if (matchPath) {
-              const zipFile = zip.file(matchPath);
-              if (zipFile) {
-                file_data = await zipFile.async("base64");
               }
             }
           }
