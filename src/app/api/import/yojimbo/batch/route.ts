@@ -98,7 +98,7 @@ export async function POST(request: Request) {
 
     if (body.items) {
       for (const yItem of body.items) {
-        // Dedup by name + created_at
+        // Check if item already exists (by name + created_at)
         const { data: existingItem } = await supabase
           .from("items")
           .select("id")
@@ -107,24 +107,30 @@ export async function POST(request: Request) {
           .eq("created_at", yItem.created_at)
           .single();
 
-        if (existingItem) continue;
+        let itemId: string;
 
-        const { data: item, error: itemError } = await supabase
-          .from("items")
-          .insert({
-            user_id: user.id,
-            name: yItem.name,
-            type: yItem.type,
-            is_flagged: yItem.is_flagged,
-            is_trashed: yItem.is_trashed,
-            is_encrypted: yItem.is_encrypted,
-            created_at: yItem.created_at,
-            updated_at: yItem.updated_at,
-          })
-          .select("id")
-          .single();
+        if (existingItem) {
+          // Update existing item's content (re-import with content fix)
+          itemId = existingItem.id;
+        } else {
+          const { data: newItem, error: itemError } = await supabase
+            .from("items")
+            .insert({
+              user_id: user.id,
+              name: yItem.name,
+              type: yItem.type,
+              is_flagged: yItem.is_flagged,
+              is_trashed: yItem.is_trashed,
+              is_encrypted: yItem.is_encrypted,
+              created_at: yItem.created_at,
+              updated_at: yItem.updated_at,
+            })
+            .select("id")
+            .single();
 
-        if (itemError || !item) continue;
+          if (itemError || !newItem) continue;
+          itemId = newItem.id;
+        }
 
         if (yItem.type === "note") {
           const htmlContent = yItem.content
@@ -134,37 +140,36 @@ export async function POST(request: Request) {
                 .join("")
             : "";
 
-          await supabase.from("note_content").insert({
-            item_id: item.id,
+          await supabase.from("note_content").upsert({
+            item_id: itemId,
             content: htmlContent,
             content_format: "html",
-          });
+          }, { onConflict: "item_id" });
         } else if (yItem.type === "bookmark") {
-          await supabase.from("bookmark_content").insert({
-            item_id: item.id,
+          await supabase.from("bookmark_content").upsert({
+            item_id: itemId,
             url: yItem.url || "",
             source_url: yItem.source_url || "",
-          });
+          }, { onConflict: "item_id" });
         } else if (yItem.type === "password") {
-          await supabase.from("password_content").insert({
-            item_id: item.id,
+          await supabase.from("password_content").upsert({
+            item_id: itemId,
             location: yItem.location || "",
             account: yItem.account || "",
             password: yItem.password || yItem.content || "",
-          });
+          }, { onConflict: "item_id" });
         } else if (yItem.type === "serial_number") {
-          await supabase.from("serial_number_content").insert({
-            item_id: item.id,
+          await supabase.from("serial_number_content").upsert({
+            item_id: itemId,
             serial_number: yItem.serial_number || "",
             owner_name: yItem.owner_name || "",
             owner_email: yItem.owner_email || "",
             organization: yItem.organization || "",
-          });
+          }, { onConflict: "item_id" });
         }
 
-        // Assign label if present
+        // Assign label if present (skip if already assigned)
         if (yItem.label_name) {
-          // Look up label ID - we need to fetch it since labels may have been created in a prior request
           const { data: labelData } = await supabase
             .from("labels")
             .select("id")
@@ -173,10 +178,10 @@ export async function POST(request: Request) {
             .single();
 
           if (labelData) {
-            await supabase.from("item_labels").insert({
-              item_id: item.id,
+            await supabase.from("item_labels").upsert({
+              item_id: itemId,
               label_id: labelData.id,
-            });
+            }, { onConflict: "item_id,label_id" });
           }
         }
 
