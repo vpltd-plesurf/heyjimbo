@@ -8,7 +8,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- ITEMS TABLE (Main content table)
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS items (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
 
     -- Basic info
@@ -36,7 +36,7 @@ CREATE TABLE IF NOT EXISTS items (
 -- NOTE_CONTENT TABLE (Note-specific content)
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS note_content (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     item_id UUID NOT NULL UNIQUE REFERENCES items(id) ON DELETE CASCADE,
 
     -- Content
@@ -56,7 +56,7 @@ CREATE TABLE IF NOT EXISTS note_content (
 -- LABELS TABLE (Tags/Labels)
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS labels (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
 
     -- Label info
@@ -75,7 +75,7 @@ CREATE TABLE IF NOT EXISTS labels (
 -- ITEM_LABELS TABLE (Many-to-many relationship)
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS item_labels (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     item_id UUID NOT NULL REFERENCES items(id) ON DELETE CASCADE,
     label_id UUID NOT NULL REFERENCES labels(id) ON DELETE CASCADE,
 
@@ -89,7 +89,7 @@ CREATE TABLE IF NOT EXISTS item_labels (
 -- ENCRYPTION_KEYS TABLE (For future client-side encryption)
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS encryption_keys (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE,
 
     -- Key info (encrypted with user's password-derived key)

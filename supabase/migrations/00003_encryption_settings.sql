@@ -1,7 +1,7 @@
 -- Encryption settings for client-side password encryption
 
 CREATE TABLE IF NOT EXISTS encryption_settings (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE,
     salt TEXT NOT NULL,
     verify_token TEXT NOT NULL,

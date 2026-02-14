@@ -4,7 +4,7 @@
 -- BOOKMARK_CONTENT TABLE
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS bookmark_content (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     item_id UUID NOT NULL UNIQUE REFERENCES items(id) ON DELETE CASCADE,
     url TEXT NOT NULL DEFAULT '',
     source_url TEXT,
@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS bookmark_content (
 -- PASSWORD_CONTENT TABLE
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS password_content (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     item_id UUID NOT NULL UNIQUE REFERENCES items(id) ON DELETE CASCADE,
     location TEXT NOT NULL DEFAULT '',
     account TEXT NOT NULL DEFAULT '',
@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS password_content (
 -- SERIAL_NUMBER_CONTENT TABLE
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS serial_number_content (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     item_id UUID NOT NULL UNIQUE REFERENCES items(id) ON DELETE CASCADE,
     serial_number TEXT NOT NULL DEFAULT '',
     owner_name TEXT,
