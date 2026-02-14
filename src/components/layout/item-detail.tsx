@@ -8,6 +8,7 @@ import { TipTapEditor } from "@/components/editor/tiptap-editor";
 import { BookmarkEditor } from "@/components/items/bookmark-editor";
 import { PasswordEditor } from "@/components/items/password-editor";
 import { SerialNumberEditor } from "@/components/items/serial-number-editor";
+import { SoftwareLicenseEditor } from "@/components/items/software-license-editor";
 import { LabelPicker } from "@/components/labels/label-picker";
 import { MasterPasswordDialog } from "@/components/encryption/master-password-dialog";
 import { useMasterPassword } from "@/contexts/master-password-context";
@@ -57,6 +58,13 @@ export function ItemDetail({
   const [snOwnerEmail, setSnOwnerEmail] = useState("");
   const [snOrganization, setSnOrganization] = useState("");
 
+  // Software license fields
+  const [slLicenseKey, setSlLicenseKey] = useState("");
+  const [slLicenseTo, setSlLicenseTo] = useState("");
+  const [slEmail, setSlEmail] = useState("");
+  const [slPurchaseDate, setSlPurchaseDate] = useState("");
+  const [slNotes, setSlNotes] = useState("");
+
   // Track the item ID to detect item switches vs content updates
   const [activeItemId, setActiveItemId] = useState<string | null>(null);
 
@@ -98,6 +106,11 @@ export function ItemDetail({
       setSnOwnerName(item.serial_number_content?.owner_name || "");
       setSnOwnerEmail(item.serial_number_content?.owner_email || "");
       setSnOrganization(item.serial_number_content?.organization || "");
+      setSlLicenseKey(item.software_license_content?.license_key || "");
+      setSlLicenseTo(item.software_license_content?.license_to || "");
+      setSlEmail(item.software_license_content?.email || "");
+      setSlPurchaseDate(item.software_license_content?.purchase_date ? item.software_license_content.purchase_date.slice(0, 10) : "");
+      setSlNotes(item.software_license_content?.notes || "");
       setIsDirty(false);
       setActiveItemId(item.id);
     }
@@ -136,10 +149,16 @@ export function ItemDetail({
       payload.sn_owner_name = snOwnerName;
       payload.sn_owner_email = snOwnerEmail;
       payload.sn_organization = snOrganization;
+    } else if (item.type === "software_license") {
+      payload.sl_license_key = slLicenseKey;
+      payload.sl_license_to = slLicenseTo;
+      payload.sl_email = slEmail;
+      payload.sl_purchase_date = slPurchaseDate || null;
+      payload.sl_notes = slNotes;
     }
 
     return payload;
-  }, [item, name, content, bookmarkUrl, bookmarkSourceUrl, pwLocation, pwAccount, pwPassword, cryptoKey, snSerialNumber, snOwnerName, snOwnerEmail, snOrganization]);
+  }, [item, name, content, bookmarkUrl, bookmarkSourceUrl, pwLocation, pwAccount, pwPassword, cryptoKey, snSerialNumber, snOwnerName, snOwnerEmail, snOrganization, slLicenseKey, slLicenseTo, slEmail, slPurchaseDate, slNotes]);
 
   // Auto-save debounce
   const saveChanges = useCallback(async () => {
@@ -346,6 +365,22 @@ export function ItemDetail({
               onOwnerNameChange={(v) => { setSnOwnerName(v); markDirty(); }}
               onOwnerEmailChange={(v) => { setSnOwnerEmail(v); markDirty(); }}
               onOrganizationChange={(v) => { setSnOrganization(v); markDirty(); }}
+              disabled={item.is_trashed}
+            />
+          )}
+
+          {item.type === "software_license" && (
+            <SoftwareLicenseEditor
+              licenseKey={slLicenseKey}
+              licenseTo={slLicenseTo}
+              email={slEmail}
+              purchaseDate={slPurchaseDate}
+              notes={slNotes}
+              onLicenseKeyChange={(v) => { setSlLicenseKey(v); markDirty(); }}
+              onLicenseToChange={(v) => { setSlLicenseTo(v); markDirty(); }}
+              onEmailChange={(v) => { setSlEmail(v); markDirty(); }}
+              onPurchaseDateChange={(v) => { setSlPurchaseDate(v); markDirty(); }}
+              onNotesChange={(v) => { setSlNotes(v); markDirty(); }}
               disabled={item.is_trashed}
             />
           )}

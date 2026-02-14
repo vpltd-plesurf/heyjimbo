@@ -13,9 +13,11 @@ import {
   Globe,
   Lock,
   Hash,
+  KeyRound,
   ChevronDown,
   Import,
   Download,
+  BarChart3,
   Sun,
   Moon,
 } from "lucide-react";
@@ -39,6 +41,7 @@ const filters = [
   { id: "bookmark", label: "Bookmarks", icon: Globe },
   { id: "password", label: "Passwords", icon: Lock },
   { id: "serial_number", label: "Serial Numbers", icon: Hash },
+  { id: "software_license", label: "Licenses", icon: KeyRound },
   { id: "flagged", label: "Flagged", icon: Flag },
   { id: "trash", label: "Trash", icon: Trash2 },
 ];
@@ -48,6 +51,7 @@ const newItemTypes = [
   { type: "bookmark", label: "Bookmark", icon: Globe },
   { type: "password", label: "Password", icon: Lock },
   { type: "serial_number", label: "Serial Number", icon: Hash },
+  { type: "software_license", label: "Software License", icon: KeyRound },
   { type: "folder", label: "Folder", icon: Folder },
 ];
 
@@ -238,6 +242,15 @@ export function Sidebar({
             >
               <Download className="w-4 h-4 mr-2" />
               Export
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => router.push("/dashboard/stats")}
+              className="w-full justify-start text-gray-600 dark:text-gray-400"
+            >
+              <BarChart3 className="w-4 h-4 mr-2" />
+              Dashboard
             </Button>
           </>
         )}

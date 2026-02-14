@@ -27,6 +27,11 @@ interface UpdateItemData {
   sn_owner_name?: string;
   sn_owner_email?: string;
   sn_organization?: string;
+  sl_license_key?: string;
+  sl_license_to?: string;
+  sl_email?: string;
+  sl_purchase_date?: string | null;
+  sl_notes?: string;
   parent_folder_id?: string | null;
 }
 
@@ -42,7 +47,7 @@ export function useItems(filter: string, searchQuery: string, currentFolderId?: 
   const buildQueryParams = useCallback((cursor?: string) => {
     const params = new URLSearchParams();
 
-    if (filter === "note" || filter === "bookmark" || filter === "password" || filter === "serial_number") {
+    if (filter === "note" || filter === "bookmark" || filter === "password" || filter === "serial_number" || filter === "software_license") {
       params.set("type", filter);
     } else if (filter === "flagged") {
       params.set("flagged", "true");

@@ -17,3 +17,83 @@ body {
   background: var(--background);
   font-family: var(--font-inter), Arial, Helvetica, sans-serif;
 }
+
+/* TipTap task list */
+ul[data-type="taskList"] {
+  list-style: none;
+  padding-left: 0;
+}
+
+ul[data-type="taskList"] li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+ul[data-type="taskList"] li label {
+  flex-shrink: 0;
+  margin-top: 0.25rem;
+}
+
+ul[data-type="taskList"] li label input[type="checkbox"] {
+  cursor: pointer;
+  width: 1rem;
+  height: 1rem;
+  accent-color: #6366f1;
+}
+
+ul[data-type="taskList"] li div {
+  flex: 1;
+}
+
+ul[data-type="taskList"] li[data-checked="true"] > div > p {
+  text-decoration: line-through;
+  opacity: 0.6;
+}
+
+/* TipTap table */
+.ProseMirror table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1rem 0;
+}
+
+.ProseMirror th,
+.ProseMirror td {
+  border: 1px solid #d1d5db;
+  padding: 0.5rem;
+  min-width: 80px;
+  text-align: left;
+}
+
+.dark .ProseMirror th,
+.dark .ProseMirror td {
+  border-color: #4b5563;
+}
+
+.ProseMirror th {
+  background-color: #f3f4f6;
+  font-weight: 600;
+}
+
+.dark .ProseMirror th {
+  background-color: #374151;
+}
+
+/* TipTap code block */
+.ProseMirror pre {
+  background-color: #1e1e1e;
+  color: #d4d4d4;
+  border-radius: 0.375rem;
+  padding: 0.75rem 1rem;
+  overflow-x: auto;
+  font-family: ui-monospace, monospace;
+  font-size: 0.875rem;
+}
+
+.ProseMirror pre code {
+  background: none;
+  color: inherit;
+  padding: 0;
+  font-size: inherit;
+}

@@ -6,7 +6,8 @@ const ITEM_SELECT = `
   note_content (content, content_format),
   bookmark_content (url, source_url),
   password_content (location, account, password),
-  serial_number_content (serial_number, owner_name, owner_email, organization)
+  serial_number_content (serial_number, owner_name, owner_email, organization),
+  software_license_content (license_key, license_to, email, purchase_date, notes)
 `;
 
 // GET /api/items/[id] - Get single item
@@ -154,6 +155,26 @@ export async function PUT(
 
       const { error } = await supabase
         .from("serial_number_content")
+        .update(updates)
+        .eq("item_id", id);
+
+      if (error) {
+        return NextResponse.json({ error: error.message }, { status: 500 });
+      }
+      hasContentUpdate = true;
+    }
+
+    // Update software license content
+    if (body.sl_license_key !== undefined || body.sl_license_to !== undefined || body.sl_email !== undefined || body.sl_purchase_date !== undefined || body.sl_notes !== undefined) {
+      const updates: Record<string, unknown> = {};
+      if (body.sl_license_key !== undefined) updates.license_key = body.sl_license_key;
+      if (body.sl_license_to !== undefined) updates.license_to = body.sl_license_to;
+      if (body.sl_email !== undefined) updates.email = body.sl_email;
+      if (body.sl_purchase_date !== undefined) updates.purchase_date = body.sl_purchase_date;
+      if (body.sl_notes !== undefined) updates.notes = body.sl_notes;
+
+      const { error } = await supabase
+        .from("software_license_content")
         .update(updates)
         .eq("item_id", id);
 

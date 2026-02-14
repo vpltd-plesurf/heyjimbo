@@ -6,7 +6,8 @@ const ITEM_SELECT = `
   note_content (content, content_format),
   bookmark_content (url, source_url),
   password_content (location, account, password),
-  serial_number_content (serial_number, owner_name, owner_email, organization)
+  serial_number_content (serial_number, owner_name, owner_email, organization),
+  software_license_content (license_key, license_to, email, purchase_date, notes)
 `;
 
 // GET /api/items - List items
@@ -45,6 +46,15 @@ export async function GET(request: Request) {
     }
     if (isTrashed === "true") {
       query = query.eq("is_trashed", true);
+      // Auto-cleanup: delete items trashed more than 30 days ago
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+      supabase
+        .from("items")
+        .delete()
+        .eq("user_id", user.id)
+        .eq("is_trashed", true)
+        .lt("trashed_at", thirtyDaysAgo)
+        .then(() => {}); // fire-and-forget
     } else {
       query = query.eq("is_trashed", false);
     }
@@ -135,6 +145,11 @@ export async function POST(request: Request) {
       const { error } = await supabase
         .from("serial_number_content")
         .insert({ item_id: item.id, serial_number: "" });
+      contentError = error;
+    } else if (type === "software_license") {
+      const { error } = await supabase
+        .from("software_license_content")
+        .insert({ item_id: item.id, license_key: "" });
       contentError = error;
     }
 

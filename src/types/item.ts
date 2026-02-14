@@ -22,6 +22,14 @@ export interface SerialNumberContent {
   organization?: string;
 }
 
+export interface SoftwareLicenseContent {
+  license_key: string;
+  license_to?: string;
+  email?: string;
+  purchase_date?: string;
+  notes?: string;
+}
+
 export interface Item {
   id: string;
   name: string;
@@ -31,6 +39,7 @@ export interface Item {
   parent_folder_id?: string | null;
   created_at: string;
   updated_at: string;
+  trashed_at?: string | null;
   labels?: Label[];
   note_content?: {
     content: string;
@@ -39,4 +48,5 @@ export interface Item {
   bookmark_content?: BookmarkContent | null;
   password_content?: PasswordContent | null;
   serial_number_content?: SerialNumberContent | null;
+  software_license_content?: SoftwareLicenseContent | null;
 }

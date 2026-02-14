@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { format, isValid } from "date-fns";
-import { FileText, Flag, Globe, Lock, Hash, Folder, X } from "lucide-react";
+import { FileText, Flag, Globe, Lock, Hash, KeyRound, Folder, X } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { Input } from "@/components/ui/input";
 import type { Item } from "@/types/item";
@@ -14,6 +14,7 @@ const typeIcons: Record<string, typeof FileText> = {
   bookmark: Globe,
   password: Lock,
   serial_number: Hash,
+  software_license: KeyRound,
   folder: Folder,
 };
 
@@ -29,6 +30,9 @@ function getPreview(item: Item): string {
   }
   if (item.type === "serial_number") {
     return item.serial_number_content?.serial_number || "No serial number";
+  }
+  if (item.type === "software_license") {
+    return item.software_license_content?.license_key || "No license key";
   }
   if (item.type === "folder") {
     return "Folder";
@@ -47,6 +51,7 @@ interface ItemListProps {
   hasMore?: boolean;
   loadingMore?: boolean;
   onLoadMore?: () => void;
+  onMoveToFolder?: (itemId: string, folderId: string) => void;
 }
 
 export function ItemList({
@@ -60,8 +65,10 @@ export function ItemList({
   hasMore,
   loadingMore,
   onLoadMore,
+  onMoveToFolder,
 }: ItemListProps) {
   const sentinelRef = useRef<HTMLDivElement>(null);
+  const [dragOverId, setDragOverId] = useState<string | null>(null);
 
   // IntersectionObserver for infinite scroll
   useEffect(() => {
@@ -123,14 +130,40 @@ export function ItemList({
             <ul className="divide-y divide-gray-100 dark:divide-gray-700">
               {items.map((item) => {
                 const Icon = typeIcons[item.type] || FileText;
+                const isFolder = item.type === "folder";
+                const isDragOver = dragOverId === item.id;
                 return (
                   <li key={item.id}>
                     <button
                       onClick={() => onSelect(item.id)}
+                      draggable={!isFolder}
+                      onDragStart={(e) => {
+                        e.dataTransfer.setData("text/plain", item.id);
+                        e.dataTransfer.effectAllowed = "move";
+                      }}
+                      onDragOver={(e) => {
+                        if (isFolder) {
+                          e.preventDefault();
+                          e.dataTransfer.dropEffect = "move";
+                          setDragOverId(item.id);
+                        }
+                      }}
+                      onDragLeave={() => setDragOverId(null)}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        setDragOverId(null);
+                        if (isFolder && onMoveToFolder) {
+                          const draggedId = e.dataTransfer.getData("text/plain");
+                          if (draggedId && draggedId !== item.id) {
+                            onMoveToFolder(draggedId, item.id);
+                          }
+                        }
+                      }}
                       className={cn(
                         "w-full text-left p-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors",
                         selectedId === item.id &&
-                          "bg-indigo-50 dark:bg-indigo-900/30 border-l-2 border-indigo-500"
+                          "bg-indigo-50 dark:bg-indigo-900/30 border-l-2 border-indigo-500",
+                        isDragOver && "bg-indigo-100 dark:bg-indigo-900/50 ring-2 ring-indigo-400"
                       )}
                     >
                       <div className="flex items-start gap-2">
@@ -169,9 +202,14 @@ export function ItemList({
                             </div>
                           )}
                           <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                            {isValid(new Date(item.updated_at))
-                              ? format(new Date(item.updated_at), "MMM d, yyyy")
-                              : "Unknown date"}
+                            {item.is_trashed && item.trashed_at
+                              ? (() => {
+                                  const daysLeft = Math.max(0, 30 - Math.floor((Date.now() - new Date(item.trashed_at).getTime()) / (1000 * 60 * 60 * 24)));
+                                  return <span className="text-red-400">{daysLeft}d until auto-delete</span>;
+                                })()
+                              : isValid(new Date(item.updated_at))
+                                ? format(new Date(item.updated_at), "MMM d, yyyy")
+                                : "Unknown date"}
                           </p>
                         </div>
                       </div>

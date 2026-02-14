@@ -143,6 +143,15 @@ export function ThreeColumnLayout() {
     [deleteItem, isMobile]
   );
 
+  // Handle moving item to folder via drag & drop
+  const handleMoveToFolder = useCallback(
+    async (itemId: string, folderId: string) => {
+      await updateItem(itemId, { parent_folder_id: folderId } as Partial<Item>);
+      refetch();
+    },
+    [updateItem, refetch]
+  );
+
   // Handle closing detail view
   const handleCloseDetail = () => {
     setSelectedId(null);
@@ -267,6 +276,7 @@ export function ThreeColumnLayout() {
                 hasMore={hasMore}
                 loadingMore={loadingMore}
                 onLoadMore={fetchMore}
+                onMoveToFolder={handleMoveToFolder}
               />
             </div>
           </div>
