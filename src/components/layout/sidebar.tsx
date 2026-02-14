@@ -153,6 +153,14 @@ export function Sidebar({
 
       {/* Navigation */}
       <nav className="flex-1 p-2 space-y-1 overflow-y-auto">
+        <GuideTip
+          tipId="filters"
+          title="Browse by Type"
+          description="Filter your items by category — notes, bookmarks, passwords, and more."
+          position="right"
+        >
+          <div />
+        </GuideTip>
         {filters.map((filter) => {
           const Icon = filter.icon;
           const isActive = currentFilter === filter.id;
@@ -177,6 +185,12 @@ export function Sidebar({
         {/* Labels section */}
         {labels.length > 0 && (
           <>
+            <GuideTip
+              tipId="labels"
+              title="Organize with Labels"
+              description="Create color-coded labels to group and find items. Click the gear icon to manage them."
+              position="right"
+            >
             <div className="pt-3 pb-1 px-3 flex items-center justify-between">
               <span className="text-[11px] font-medium text-neutral-400 uppercase tracking-widest">
                 Labels
@@ -188,6 +202,7 @@ export function Sidebar({
                 <Settings className="w-3 h-3" />
               </button>
             </div>
+            </GuideTip>
             {labels.map((label) => {
               const isActive = currentFilter === `label:${label.id}`;
               return (

@@ -162,6 +162,43 @@ export function ThreeColumnLayout() {
     [updateItem, refetch]
   );
 
+  // Bulk action handlers
+  const handleBulkTrash = useCallback(
+    async (ids: string[]) => {
+      await Promise.all(ids.map((id) => updateItem(id, { is_trashed: true })));
+      setSelectedId(null);
+      refetch();
+    },
+    [updateItem, refetch]
+  );
+
+  const handleBulkFlag = useCallback(
+    async (ids: string[], flagged: boolean) => {
+      await Promise.all(ids.map((id) => updateItem(id, { is_flagged: flagged })));
+      refetch();
+    },
+    [updateItem, refetch]
+  );
+
+  const handleBulkLabel = useCallback(
+    async (ids: string[], labelId: string) => {
+      await Promise.all(ids.map((id) => assignLabel(id, labelId)));
+      refetch();
+    },
+    [assignLabel, refetch]
+  );
+
+  const handleBulkMove = useCallback(
+    async (ids: string[], folderId: string) => {
+      await Promise.all(ids.map((id) => updateItem(id, { parent_folder_id: folderId } as Partial<Item>)));
+      refetch();
+    },
+    [updateItem, refetch]
+  );
+
+  // Get folder items for bulk move menu
+  const folderItems = items.filter((i) => i.type === "folder");
+
   // Handle closing detail view
   const handleCloseDetail = () => {
     setSelectedId(null);
@@ -230,6 +267,16 @@ export function ThreeColumnLayout() {
       removeLabel(itemId, labelId);
       refetch();
     },
+  };
+
+  // Shared bulk action props for ItemList
+  const bulkActionProps = {
+    onBulkTrash: handleBulkTrash,
+    onBulkFlag: handleBulkFlag,
+    onBulkLabel: handleBulkLabel,
+    onBulkMove: handleBulkMove,
+    allLabels,
+    folders: folderItems,
   };
 
   // Breadcrumb component
@@ -314,6 +361,7 @@ export function ThreeColumnLayout() {
                   loadingMore={loadingMore}
                   onLoadMore={fetchMore}
                   onMoveToFolder={handleMoveToFolder}
+                  {...bulkActionProps}
                 />
               </div>
             </motion.div>
@@ -415,6 +463,7 @@ export function ThreeColumnLayout() {
               loadingMore={loadingMore}
               onLoadMore={fetchMore}
               onMoveToFolder={handleMoveToFolder}
+              {...bulkActionProps}
             />
           </div>
         </div>
@@ -459,6 +508,7 @@ export function ThreeColumnLayout() {
             loadingMore={loadingMore}
             onLoadMore={fetchMore}
             onMoveToFolder={handleMoveToFolder}
+            {...bulkActionProps}
           />
         </div>
       </div>

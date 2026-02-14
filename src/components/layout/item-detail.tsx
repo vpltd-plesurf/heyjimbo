@@ -17,6 +17,7 @@ import { encrypt, decrypt, isEncrypted } from "@/lib/crypto";
 import { AttachmentList } from "@/components/attachments/attachment-list";
 import { isDemoMode } from "@/lib/demo";
 import { cn } from "@/lib/utils/cn";
+import { GuideTip } from "@/components/guide/guide-tip";
 import type { Item, Label } from "@/types/item";
 
 const isDemo = isDemoMode();
@@ -250,6 +251,12 @@ export function ItemDetail({
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-border">
           <div className="flex items-center gap-2">
+            <GuideTip
+              tipId="item-flag"
+              title="Flag Important Items"
+              description="Flag items to quickly find them later in the Flagged section of the sidebar."
+              position="bottom"
+            >
             <Button
               variant="ghost"
               size="icon"
@@ -258,6 +265,7 @@ export function ItemDetail({
             >
               <Flag className="w-4 h-4" />
             </Button>
+            </GuideTip>
             {item.is_trashed ? (
               <>
                 <Button variant="ghost" size="icon" onClick={handleRestore}>
@@ -273,9 +281,16 @@ export function ItemDetail({
                 </Button>
               </>
             ) : (
+              <GuideTip
+                tipId="item-trash"
+                title="Trash & Auto-Delete"
+                description="Move items to trash. Trashed items are automatically deleted after 30 days."
+                position="bottom"
+              >
               <Button variant="ghost" size="icon" onClick={handleMoveToTrash}>
                 <Trash2 className="w-4 h-4" />
               </Button>
+              </GuideTip>
             )}
             {onAssignLabel && onRemoveLabel && (
               <LabelPicker
