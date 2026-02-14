@@ -48,10 +48,96 @@ function convertTimestamp(appleTs: number | null): string {
   return new Date(unixMs).toISOString();
 }
 
+// Cocoa/NSKeyedArchiver metadata strings to filter out when scanning bplist
+const COCOA_METADATA = new Set([
+  "NSKeyedArchiver", "NSAttributedString", "NSMutableString",
+  "NSParagraphStyle", "NSMutableParagraphStyle", "NSColorSpace",
+  "NSDictionary", "NSMutableArray", "NSMutableData", "NSObject",
+  "NSStrokeColor", "NSStrokeWidth", "NSUnderline", "NSFont",
+  "NSColor", "NSBackgroundColor", "NSKern", "NSSuperScript",
+  "NSTextAttachment", "NSFileWrapper", "NSMutableDictionary",
+  "NSURL", "NSNumber",
+  "$archiver", "$version", "$objects", "$top",
+  "NS.string", "NS.keys", "NS.objects", "NSAttributes",
+  "NS.bytes", "NS.data", "NS.base",
+]);
+
+// Patterns that indicate a string is Cocoa metadata, not user content
+const METADATA_PATTERNS = [
+  /^[\$%&'()*+,\-./0-9:;<=>?@A-Z\[\\\]^_`{|}~]+\[?NS/,
+  /^\[?NS[A-Z][a-z]/,
+  /^YNS[A-Z]/,
+  /^[a-z]{0,3}YNS(Param|Row|Col|Table)/,
+  /^VNS(Size|Font|Kern|Color|Link)/,
+  /^WNS(Color|Table)/,
+  /^XNS(fFlags|Param|RowNum|ColNum)/,
+  /^YNS(Param|RowSpan|ColSpan)/,
+  /^\]NS(StrokeColor|StrokeWidth|CatalogName)/,
+  /^\\NS(ColorSpace|Descriptor|HasWidth)/,
+  /^_NS(BackgroundColor|ParagraphStyle)/,
+  /^\.IEC 61966/,
+  /^X\$version/,
+];
+
+/**
+ * Extract plain text content from a Yojimbo ZBYTES binary plist (NSKeyedArchiver).
+ * Works in the browser without bplist-parser by scanning for printable text runs.
+ */
+function extractTextFromBplist(bytes: Uint8Array): string | null {
+  if (bytes.length < 10) return null;
+
+  // First byte is a type prefix: 0x01 = bplist data, 0x02 = UUID file reference
+  const prefix = bytes[0];
+
+  // 0x02 prefix = UUID reference to a file (PDF, image), no extractable text
+  if (prefix === 0x02) return null;
+
+  // Check for bplist magic after prefix
+  const magic = String.fromCharCode(bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6]);
+  if (magic !== "bplist") return null;
+
+  // Scan for printable ASCII/UTF-8 string runs
+  const candidates: string[] = [];
+  let current = "";
+  for (let i = 0; i < bytes.length; i++) {
+    const ch = bytes[i];
+    // Printable ASCII + common whitespace (tab, newline, CR)
+    if ((ch >= 32 && ch < 127) || ch === 10 || ch === 13 || ch === 9) {
+      current += String.fromCharCode(ch);
+    } else {
+      if (current.length > 5) {
+        const trimmed = current.trim();
+        if (trimmed.length > 5 && !isCocoaMetadata(trimmed)) {
+          candidates.push(trimmed);
+        }
+      }
+      current = "";
+    }
+  }
+  if (current.length > 5) {
+    const trimmed = current.trim();
+    if (trimmed.length > 5 && !isCocoaMetadata(trimmed)) {
+      candidates.push(trimmed);
+    }
+  }
+
+  if (candidates.length === 0) return null;
+
+  // Return the longest candidate (typically the actual note content)
+  candidates.sort((a, b) => b.length - a.length);
+  return candidates[0];
+}
+
+function isCocoaMetadata(s: string): boolean {
+  if (COCOA_METADATA.has(s)) return true;
+  for (const pattern of METADATA_PATTERNS) {
+    if (pattern.test(s)) return true;
+  }
+  return false;
+}
+
 // Z_ENT type mapping (based on actual Yojimbo data analysis)
-// All items in the sample DB are Z_ENT=18 (notes), but Yojimbo supports other types
 function mapEntityType(zEnt: number, item: Record<string, unknown>): string {
-  // Check for type-specific fields to determine actual type
   if (item.ZURLSTRING) return "bookmark";
   if (item.ZSERIALNUMBER) return "serial_number";
   if (item.ZENCRYPTEDPASSWORD || (item.ZLOCATION && item.ZACCOUNT)) return "password";
@@ -78,7 +164,7 @@ function extractItems(db: Database): YojimboItem[] {
     }
   }
 
-  // Get all items with their blob string reps for plaintext content
+  // Get all items with their blob string reps AND raw bytes for fallback
   const itemResults = db.exec(`
     SELECT
       i.Z_PK, i.Z_ENT, i.ZNAME, i.ZENCRYPTED, i.ZFLAGGED, i.ZINTRASH,
@@ -86,7 +172,8 @@ function extractItems(db: Database): YojimboItem[] {
       i.ZURLSTRING, i.ZSOURCEURLSTRING,
       i.ZLOCATION, i.ZACCOUNT,
       i.ZSERIALNUMBER, i.ZOWNERNAME, i.ZOWNEREMAIL, i.ZORGANIZATION,
-      bs.ZSTRING
+      bs.ZSTRING,
+      b.ZBYTES
     FROM ZITEM i
     LEFT JOIN ZBLOB b ON i.ZBLOB = b.Z_PK
     LEFT JOIN ZBLOBSTRINGREP bs ON bs.ZBLOB = b.Z_PK
@@ -109,10 +196,24 @@ function extractItems(db: Database): YojimboItem[] {
     const type = mapEntityType(zEnt, itemData);
     const labelPk = row[6] as number | null;
 
+    // Try ZBLOBSTRINGREP first, fall back to extracting from ZBYTES bplist
+    let content = "";
+    if (!encrypted) {
+      const stringRep = row[17] as string | null;
+      if (stringRep) {
+        content = stringRep;
+      } else {
+        const rawBytes = row[18] as Uint8Array | null;
+        if (rawBytes) {
+          content = extractTextFromBplist(rawBytes) || "";
+        }
+      }
+    }
+
     return {
       name: (row[2] as string) || "Untitled",
       type,
-      content: encrypted ? "" : ((row[17] as string) || ""),
+      content,
       is_flagged: (row[4] as number) === 1,
       is_trashed: (row[5] as number) === 1,
       is_encrypted: encrypted,
