@@ -149,9 +149,9 @@ export async function parseYojimboZip(buffer: ArrayBuffer): Promise<YojimboParse
 
   const dbBuffer = await (dbFile as JSZip.JSZipObject).async("arraybuffer");
 
-  // Initialize sql.js (use CDN for WASM in browser environments)
+  // Initialize sql.js — serve WASM from public/ for browser
   const SQL = await initSqlJs({
-    locateFile: (file: string) => `https://sql.js.org/dist/${file}`,
+    locateFile: (file: string) => `/${file}`,
   });
   const db = new SQL.Database(new Uint8Array(dbBuffer));
 
