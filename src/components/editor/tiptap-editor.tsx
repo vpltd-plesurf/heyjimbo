@@ -75,6 +75,7 @@ export function TipTapEditor({
     extensions: [
       StarterKit.configure({
         codeBlock: false,
+        link: false, // Using standalone Link extension below
       }),
       Link.configure({
         openOnClick: false,

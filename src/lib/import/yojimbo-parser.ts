@@ -204,17 +204,56 @@ function buildFileMap(zip: JSZip): Map<string, string> {
 }
 
 /**
- * Detect file type from magic bytes.
+ * Extract embedded image/PDF data from an NSKeyedArchiver bplist.
+ * _EXTERNAL_DATA files are bplist wrappers — the actual image/PDF is embedded
+ * at a variable offset. We scan for magic bytes to find it.
  */
-function detectFileType(bytes: Uint8Array): string {
-  if (bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46) return "pdf"; // %PDF
-  if (bytes[0] === 0xFF && bytes[1] === 0xD8 && bytes[2] === 0xFF) return "jpg"; // JPEG
-  if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4E && bytes[3] === 0x47) return "png"; // PNG
-  if (bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46) return "gif"; // GIF
-  if (bytes[0] === 0x49 && bytes[1] === 0x49 && bytes[2] === 0x2A && bytes[3] === 0x00) return "tiff"; // TIFF LE
-  if (bytes[0] === 0x4D && bytes[1] === 0x4D && bytes[2] === 0x00 && bytes[3] === 0x2A) return "tiff"; // TIFF BE
-  if (bytes[0] === 0x42 && bytes[1] === 0x4D) return "bmp"; // BMP
-  return "png"; // default to png for unknown image
+function extractEmbeddedFile(bytes: Uint8Array): { data: Uint8Array; type: string } | null {
+  for (let i = 0; i < bytes.length - 4; i++) {
+    // JPEG: FF D8 FF
+    if (bytes[i] === 0xFF && bytes[i + 1] === 0xD8 && bytes[i + 2] === 0xFF) {
+      // Find JPEG end marker (FF D9)
+      for (let j = bytes.length - 2; j > i; j--) {
+        if (bytes[j] === 0xFF && bytes[j + 1] === 0xD9) {
+          return { data: bytes.slice(i, j + 2), type: "jpg" };
+        }
+      }
+      return { data: bytes.slice(i), type: "jpg" };
+    }
+    // PNG: 89 50 4E 47
+    if (bytes[i] === 0x89 && bytes[i + 1] === 0x50 && bytes[i + 2] === 0x4E && bytes[i + 3] === 0x47) {
+      // Find PNG end marker (IEND: 49 45 4E 44 AE 42 60 82)
+      for (let j = bytes.length - 8; j > i; j--) {
+        if (bytes[j] === 0x49 && bytes[j + 1] === 0x45 && bytes[j + 2] === 0x4E && bytes[j + 3] === 0x44) {
+          return { data: bytes.slice(i, j + 8), type: "png" };
+        }
+      }
+      return { data: bytes.slice(i), type: "png" };
+    }
+    // PDF: 25 50 44 46 (%PDF)
+    if (bytes[i] === 0x25 && bytes[i + 1] === 0x50 && bytes[i + 2] === 0x44 && bytes[i + 3] === 0x46) {
+      // Find PDF end marker (%%EOF)
+      for (let j = bytes.length - 5; j > i; j--) {
+        if (bytes[j] === 0x25 && bytes[j + 1] === 0x25 && bytes[j + 2] === 0x45 && bytes[j + 3] === 0x4F && bytes[j + 4] === 0x46) {
+          return { data: bytes.slice(i, j + 5), type: "pdf" };
+        }
+      }
+      return { data: bytes.slice(i), type: "pdf" };
+    }
+    // TIFF LE: 49 49 2A 00
+    if (bytes[i] === 0x49 && bytes[i + 1] === 0x49 && bytes[i + 2] === 0x2A && bytes[i + 3] === 0x00) {
+      return { data: bytes.slice(i), type: "tiff" };
+    }
+    // TIFF BE: 4D 4D 00 2A
+    if (bytes[i] === 0x4D && bytes[i + 1] === 0x4D && bytes[i + 2] === 0x00 && bytes[i + 3] === 0x2A) {
+      return { data: bytes.slice(i), type: "tiff" };
+    }
+    // GIF: 47 49 46
+    if (bytes[i] === 0x47 && bytes[i + 1] === 0x49 && bytes[i + 2] === 0x46) {
+      return { data: bytes.slice(i), type: "gif" };
+    }
+  }
+  return null;
 }
 
 /**
@@ -303,19 +342,20 @@ async function extractItems(db: Database, zip: JSZip): Promise<YojimboItem[]> {
           if (zipPath) {
             const zipFile = zip.file(zipPath);
             if (zipFile) {
-              const fileBytes = await zipFile.async("uint8array");
-              file_data = uint8ToBase64(fileBytes);
-
-              // Detect actual file type from magic bytes
-              const detectedType = detectFileType(fileBytes);
-              if (detectedType === "pdf") {
-                type = "pdf";
-                file_name = `${itemName}.pdf`;
-                content_type = "application/pdf";
-              } else {
-                type = "image";
-                file_name = `${itemName}.${detectedType}`;
-                content_type = guessContentType(file_name);
+              const bplistBytes = await zipFile.async("uint8array");
+              // _EXTERNAL_DATA files are bplist wrappers — extract embedded image/PDF
+              const embedded = extractEmbeddedFile(bplistBytes);
+              if (embedded) {
+                file_data = uint8ToBase64(embedded.data);
+                if (embedded.type === "pdf") {
+                  type = "pdf";
+                  file_name = `${itemName}.pdf`;
+                  content_type = "application/pdf";
+                } else {
+                  type = "image";
+                  file_name = `${itemName}.${embedded.type}`;
+                  content_type = guessContentType(file_name);
+                }
               }
             }
           }
