@@ -3,6 +3,7 @@
 import { useState, useRef } from "react";
 import { Upload, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { parseYojimboZip, type YojimboItem, type YojimboLabel } from "@/lib/import/yojimbo-parser";
 
 interface ImportSummary {
   total: number;
@@ -13,32 +14,70 @@ interface ImportSummary {
   byType: Record<string, number>;
 }
 
+const BATCH_SIZE = 20;
+
 export function YojimboImport() {
   const [status, setStatus] = useState<"idle" | "uploading" | "success" | "error">("idle");
   const [summary, setSummary] = useState<ImportSummary | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
+  const [progress, setProgress] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const sendBatch = async (body: { items?: YojimboItem[]; labels?: YojimboLabel[] }) => {
+    const response = await fetch("/api/import/yojimbo/batch", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (!response.ok) {
+      const data = await response.json();
+      throw new Error(data.error || "Batch import failed");
+    }
+    return response.json();
+  };
 
   const handleUpload = async (file: File) => {
     setStatus("uploading");
     setErrorMessage("");
+    setProgress("Reading ZIP file...");
 
     try {
-      const formData = new FormData();
-      formData.append("file", file);
+      // 1. Parse ZIP client-side
+      const buffer = await file.arrayBuffer();
+      setProgress("Parsing database...");
+      const result = await parseYojimboZip(buffer);
 
-      const response = await fetch("/api/import/yojimbo", {
-        method: "POST",
-        body: formData,
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Import failed");
+      // 2. Send labels first
+      let labelsImported = 0;
+      if (result.labels.length > 0) {
+        setProgress(`Importing ${result.labels.length} labels...`);
+        await sendBatch({ labels: result.labels });
+        labelsImported = result.labels.length;
       }
 
-      setSummary(data.summary);
+      // 3. Send items in batches
+      let totalImported = 0;
+      const totalItems = result.items.length;
+
+      for (let i = 0; i < totalItems; i += BATCH_SIZE) {
+        const batch = result.items.slice(i, i + BATCH_SIZE);
+        const batchNum = Math.floor(i / BATCH_SIZE) + 1;
+        const totalBatches = Math.ceil(totalItems / BATCH_SIZE);
+        setProgress(`Importing items... batch ${batchNum}/${totalBatches} (${Math.min(i + BATCH_SIZE, totalItems)}/${totalItems})`);
+
+        const batchResult = await sendBatch({ items: batch });
+        totalImported += batchResult.imported || 0;
+      }
+
+      // 4. Show summary
+      setSummary({
+        total: result.summary.total,
+        imported: result.summary.imported,
+        encrypted: result.summary.encrypted,
+        actuallyImported: totalImported,
+        labelsImported,
+        byType: result.summary.byType,
+      });
       setStatus("success");
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Import failed");
@@ -60,6 +99,7 @@ export function YojimboImport() {
       </h2>
       <p className="text-sm text-neutral-500 mb-6">
         Upload your Yojimbo backup ZIP file to import your items and labels.
+        The file is parsed locally in your browser — only item data is sent to the server.
       </p>
 
       {status === "idle" && (
@@ -88,7 +128,7 @@ export function YojimboImport() {
         <div className="border border-border rounded-xl p-8 text-center">
           <Loader2 className="w-8 h-8 mx-auto text-primary mb-3 animate-spin" />
           <p className="text-sm text-neutral-500">
-            Importing your Yojimbo data...
+            {progress}
           </p>
         </div>
       )}
@@ -122,7 +162,7 @@ export function YojimboImport() {
             </div>
             {Object.entries(summary.byType).map(([type, count]) => (
               <div key={type} className="flex justify-between pl-4">
-                <dt className="text-neutral-500 dark:text-neutral-500 capitalize">{type.replace("_", " ")}s</dt>
+                <dt className="text-neutral-500 capitalize">{type.replace("_", " ")}s</dt>
                 <dd>{count}</dd>
               </div>
             ))}
