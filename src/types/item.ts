@@ -28,6 +28,7 @@ export interface Item {
   type: string;
   is_flagged: boolean;
   is_trashed: boolean;
+  parent_folder_id?: string | null;
   created_at: string;
   updated_at: string;
   labels?: Label[];

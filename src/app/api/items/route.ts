@@ -27,6 +27,7 @@ export async function GET(request: Request) {
     const isTrashed = searchParams.get("trashed");
     const search = searchParams.get("search");
     const cursor = searchParams.get("cursor");
+    const folderId = searchParams.get("folder");
     const limit = Math.min(parseInt(searchParams.get("limit") || "50", 10), 100);
 
     let query = supabase
@@ -48,10 +49,17 @@ export async function GET(request: Request) {
       query = query.eq("is_trashed", false);
     }
     if (search) {
-      query = query.textSearch("search_vector", search);
+      // Use ilike for partial matching (more forgiving than full-text search)
+      query = query.ilike("name", `%${search}%`);
     }
     if (cursor) {
       query = query.lt("updated_at", cursor);
+    }
+    // Folder filtering — only when not searching/filtering by type/flag/trash
+    if (folderId) {
+      query = query.eq("parent_folder_id", folderId);
+    } else if (!search && !type && !isFlagged && !isTrashed) {
+      query = query.is("parent_folder_id", null);
     }
 
     const { data, error } = await query;
@@ -87,15 +95,16 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { name, type = "note", content = "", content_format = "html" } = body;
+    const { name, type = "note", content = "", content_format = "html", parent_folder_id } = body;
 
     // Create the item
     const { data: item, error: itemError } = await supabase
       .from("items")
       .insert({
         user_id: user.id,
-        name: name || "Untitled",
+        name: name || (type === "folder" ? "New Folder" : "Untitled"),
         type,
+        ...(parent_folder_id ? { parent_folder_id } : {}),
       })
       .select()
       .single();

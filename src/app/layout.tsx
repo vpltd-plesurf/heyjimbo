@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { DemoProvider } from "@/lib/demo-context";
 import { MasterPasswordProvider } from "@/contexts/master-password-context";
+import { ThemeProvider } from "@/contexts/theme-context";
 import "./globals.css";
 
 const inter = Inter({
@@ -22,9 +23,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.variable} font-sans antialiased`}>
-        <DemoProvider>
-          <MasterPasswordProvider>{children}</MasterPasswordProvider>
-        </DemoProvider>
+        <ThemeProvider>
+          <DemoProvider>
+            <MasterPasswordProvider>{children}</MasterPasswordProvider>
+          </DemoProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

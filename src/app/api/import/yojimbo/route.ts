@@ -78,6 +78,7 @@ export async function POST(request: Request) {
           type: yItem.type,
           is_flagged: yItem.is_flagged,
           is_trashed: yItem.is_trashed,
+          is_encrypted: yItem.is_encrypted,
           created_at: yItem.created_at,
           updated_at: yItem.updated_at,
         })
@@ -118,7 +119,7 @@ export async function POST(request: Request) {
             item_id: item.id,
             location: yItem.location || "",
             account: yItem.account || "",
-            password: "",
+            password: yItem.password || yItem.content || "",
           });
       } else if (yItem.type === "serial_number") {
         await supabase

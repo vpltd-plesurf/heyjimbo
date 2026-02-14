@@ -66,12 +66,13 @@ export async function PUT(
     }
 
     const body = await request.json();
-    const { name, is_flagged, is_trashed, content, content_format } = body;
+    const { name, is_flagged, is_trashed, content, content_format, parent_folder_id } = body;
 
     // Update item fields
     const itemUpdates: Record<string, unknown> = {};
     if (name !== undefined) itemUpdates.name = name;
     if (is_flagged !== undefined) itemUpdates.is_flagged = is_flagged;
+    if (parent_folder_id !== undefined) itemUpdates.parent_folder_id = parent_folder_id;
     if (is_trashed !== undefined) {
       itemUpdates.is_trashed = is_trashed;
       itemUpdates.trashed_at = is_trashed ? new Date().toISOString() : null;

@@ -15,9 +15,13 @@ import {
   Hash,
   ChevronDown,
   Import,
+  Download,
+  Sun,
+  Moon,
 } from "lucide-react";
 import { isDemoMode } from "@/lib/demo";
 import { createClient } from "@/lib/supabase/client";
+import { useTheme } from "@/contexts/theme-context";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils/cn";
 import { useLabels } from "@/hooks/use-labels";
@@ -44,6 +48,7 @@ const newItemTypes = [
   { type: "bookmark", label: "Bookmark", icon: Globe },
   { type: "password", label: "Password", icon: Lock },
   { type: "serial_number", label: "Serial Number", icon: Hash },
+  { type: "folder", label: "Folder", icon: Folder },
 ];
 
 const isDemo = isDemoMode();
@@ -57,6 +62,7 @@ export function Sidebar({
   const supabase = isDemo ? null : createClient();
   const [showLabelManager, setShowLabelManager] = useState(false);
   const [showNewMenu, setShowNewMenu] = useState(false);
+  const { resolvedTheme, setTheme } = useTheme();
 
   const {
     labels,
@@ -198,16 +204,42 @@ export function Sidebar({
 
       {/* Footer */}
       <div className="p-4 border-t border-gray-200 dark:border-gray-700 space-y-1">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+          className="w-full justify-start text-gray-600 dark:text-gray-400"
+        >
+          {resolvedTheme === "dark" ? (
+            <Sun className="w-4 h-4 mr-2" />
+          ) : (
+            <Moon className="w-4 h-4 mr-2" />
+          )}
+          {resolvedTheme === "dark" ? "Light Mode" : "Dark Mode"}
+        </Button>
         {!isDemo && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => router.push("/dashboard/import")}
-            className="w-full justify-start text-gray-600 dark:text-gray-400"
-          >
-            <Import className="w-4 h-4 mr-2" />
-            Import
-          </Button>
+          <>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => router.push("/dashboard/import")}
+              className="w-full justify-start text-gray-600 dark:text-gray-400"
+            >
+              <Import className="w-4 h-4 mr-2" />
+              Import
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                window.open("/api/export?format=json", "_blank");
+              }}
+              className="w-full justify-start text-gray-600 dark:text-gray-400"
+            >
+              <Download className="w-4 h-4 mr-2" />
+              Export
+            </Button>
+          </>
         )}
         <Button
           variant="ghost"

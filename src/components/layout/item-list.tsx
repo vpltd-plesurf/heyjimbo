@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { format, isValid } from "date-fns";
-import { FileText, Flag, Globe, Lock, Hash } from "lucide-react";
+import { FileText, Flag, Globe, Lock, Hash, Folder, X } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { Input } from "@/components/ui/input";
 import type { Item } from "@/types/item";
@@ -14,6 +14,7 @@ const typeIcons: Record<string, typeof FileText> = {
   bookmark: Globe,
   password: Lock,
   serial_number: Hash,
+  folder: Folder,
 };
 
 function getPreview(item: Item): string {
@@ -28,6 +29,9 @@ function getPreview(item: Item): string {
   }
   if (item.type === "serial_number") {
     return item.serial_number_content?.serial_number || "No serial number";
+  }
+  if (item.type === "folder") {
+    return "Folder";
   }
   return "No content";
 }
@@ -83,14 +87,29 @@ export function ItemList({
     <div className="flex flex-col h-full bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700">
       {/* Search */}
       <div className="p-3 border-b border-gray-200 dark:border-gray-700">
-        <Input
-          ref={searchInputRef}
-          type="search"
-          placeholder="Search..."
-          value={searchQuery}
-          onChange={(e) => onSearchChange(e.target.value)}
-          className="h-8 text-sm"
-        />
+        <div className="relative">
+          <Input
+            ref={searchInputRef}
+            type="text"
+            placeholder="Search... (⌘K)"
+            value={searchQuery}
+            onChange={(e) => onSearchChange(e.target.value)}
+            className="h-8 text-sm pr-7"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => onSearchChange("")}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+        {searchQuery && !loading && (
+          <p className="text-xs text-gray-400 mt-1">
+            {items.length} result{items.length !== 1 ? "s" : ""}
+          </p>
+        )}
       </div>
 
       {/* Items List */}

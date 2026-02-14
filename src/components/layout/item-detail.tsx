@@ -12,8 +12,12 @@ import { LabelPicker } from "@/components/labels/label-picker";
 import { MasterPasswordDialog } from "@/components/encryption/master-password-dialog";
 import { useMasterPassword } from "@/contexts/master-password-context";
 import { encrypt, decrypt, isEncrypted } from "@/lib/crypto";
+import { AttachmentList } from "@/components/attachments/attachment-list";
+import { isDemoMode } from "@/lib/demo";
 import { cn } from "@/lib/utils/cn";
 import type { Item, Label } from "@/types/item";
+
+const isDemo = isDemoMode();
 
 interface ItemDetailProps {
   item: Item | null;
@@ -352,6 +356,11 @@ export function ItemDetail({
           <p className="text-xs text-gray-400 mt-2">Saving...</p>
         )}
       </div>
+
+      {/* Attachments (production only, non-folder items) */}
+      {!isDemo && item.type !== "folder" && (
+        <AttachmentList itemId={item.id} />
+      )}
     </div>
   );
 }

@@ -138,7 +138,7 @@ export async function parseYojimboZip(buffer: ArrayBuffer): Promise<YojimboParse
   // Find the Database.sqlite file inside the ZIP
   let dbFile: JSZip.JSZipObject | null = null;
   zip.forEach((relativePath, file) => {
-    if (relativePath.endsWith("Database.sqlite") && !file.dir) {
+    if (relativePath.endsWith("Database.sqlite") && !file.dir && !relativePath.includes("/._")) {
       dbFile = file;
     }
   });

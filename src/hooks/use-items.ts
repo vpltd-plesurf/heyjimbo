@@ -9,6 +9,7 @@ interface CreateItemData {
   name?: string;
   type?: string;
   content?: string;
+  parent_folder_id?: string | null;
 }
 
 interface UpdateItemData {
@@ -26,9 +27,10 @@ interface UpdateItemData {
   sn_owner_name?: string;
   sn_owner_email?: string;
   sn_organization?: string;
+  parent_folder_id?: string | null;
 }
 
-export function useItems(filter: string, searchQuery: string) {
+export function useItems(filter: string, searchQuery: string, currentFolderId?: string | null) {
   // eslint-disable-next-line react-hooks/rules-of-hooks -- isDemoMode() is a build-time constant
   if (isDemoMode()) return useItemsDemo(filter, searchQuery);
   const [items, setItems] = useState<Item[]>([]);
@@ -54,12 +56,16 @@ export function useItems(filter: string, searchQuery: string) {
       params.set("search", searchQuery);
     }
 
+    if (currentFolderId) {
+      params.set("folder", currentFolderId);
+    }
+
     if (cursor) {
       params.set("cursor", cursor);
     }
 
     return params.toString();
-  }, [filter, searchQuery]);
+  }, [filter, searchQuery, currentFolderId]);
 
   // Abort controller ref to cancel stale requests
   const abortControllerRef = useRef<AbortController | null>(null);

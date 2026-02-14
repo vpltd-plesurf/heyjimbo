@@ -7,6 +7,14 @@ import { ItemDetail } from "./item-detail";
 import { useItems } from "@/hooks/use-items";
 import { useLabels } from "@/hooks/use-labels";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
+import { Menu, ArrowLeft, ChevronRight } from "lucide-react";
+
+type MobileView = "sidebar" | "list" | "detail";
+
+interface FolderBreadcrumb {
+  id: string;
+  name: string;
+}
 
 export function ThreeColumnLayout() {
   const [currentFilter, setCurrentFilter] = useState("all");
@@ -14,6 +22,19 @@ export function ThreeColumnLayout() {
   const [searchInput, setSearchInput] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const [mobileView, setMobileView] = useState<MobileView>("list");
+  const [isMobile, setIsMobile] = useState(false);
+  const [folderStack, setFolderStack] = useState<FolderBreadcrumb[]>([]);
+
+  const currentFolderId = folderStack.length > 0 ? folderStack[folderStack.length - 1].id : null;
+
+  // Detect mobile viewport
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
 
   // Debounce search input by 300ms
   useEffect(() => {
@@ -22,7 +43,7 @@ export function ThreeColumnLayout() {
   }, [searchInput]);
 
   const { items, loading, loadingMore, hasMore, createItem, updateItem, deleteItem, fetchMore, refetch } =
-    useItems(currentFilter, debouncedSearch);
+    useItems(currentFilter, debouncedSearch, currentFolderId);
 
   const {
     labels: allLabels,
@@ -51,30 +72,65 @@ export function ThreeColumnLayout() {
   // Clear selection when filter changes
   useEffect(() => {
     setSelectedId(null);
-  }, [currentFilter]);
+    setFolderStack([]);
+    if (isMobile) setMobileView("list");
+  }, [currentFilter, isMobile]);
+
+  // Navigate into a folder
+  const handleOpenFolder = (folderId: string, folderName: string) => {
+    setFolderStack((prev) => [...prev, { id: folderId, name: folderName }]);
+    setSelectedId(null);
+  };
+
+  // Navigate back to a breadcrumb level
+  const handleBreadcrumbNav = (index: number) => {
+    if (index === -1) {
+      setFolderStack([]);
+    } else {
+      setFolderStack((prev) => prev.slice(0, index + 1));
+    }
+    setSelectedId(null);
+  };
 
   // Handle creating a new item
   const handleNewItem = async (type: string = "note") => {
-    // Switch away from trash view so the new item is visible
     if (currentFilter === "trash") {
       setCurrentFilter("all");
     }
-    const newItem = await createItem({ name: "Untitled", type });
+    const newItem = await createItem({
+      name: type === "folder" ? "New Folder" : "Untitled",
+      type,
+      parent_folder_id: currentFolderId,
+    });
     if (newItem) {
-      setSelectedId(newItem.id);
+      if (type !== "folder") {
+        setSelectedId(newItem.id);
+        if (isMobile) setMobileView("detail");
+      }
     }
+  };
+
+  // Handle selecting an item — double-click folders to open
+  const handleSelect = (id: string) => {
+    const item = items.find((i) => i.id === id);
+    if (item?.type === "folder") {
+      handleOpenFolder(id, item.name);
+      return;
+    }
+    setSelectedId(id);
+    if (isMobile) setMobileView("detail");
   };
 
   // Handle updating an item
   const handleUpdate = useCallback(
     async (id: string, updates: Partial<Item & { content?: string }>) => {
       await updateItem(id, updates);
-      // If item was trashed, clear selection
       if (updates.is_trashed) {
         setSelectedId(null);
+        if (isMobile) setMobileView("list");
       }
     },
-    [updateItem]
+    [updateItem, isMobile]
   );
 
   // Handle deleting an item
@@ -82,13 +138,21 @@ export function ThreeColumnLayout() {
     async (id: string) => {
       await deleteItem(id);
       setSelectedId(null);
+      if (isMobile) setMobileView("list");
     },
-    [deleteItem]
+    [deleteItem, isMobile]
   );
 
   // Handle closing detail view
   const handleCloseDetail = () => {
     setSelectedId(null);
+    if (isMobile) setMobileView("list");
+  };
+
+  // Handle sidebar filter change on mobile
+  const handleFilterChange = (filter: string) => {
+    setCurrentFilter(filter);
+    if (isMobile) setMobileView("list");
   };
 
   // Keyboard shortcuts
@@ -135,6 +199,116 @@ export function ThreeColumnLayout() {
 
   useKeyboardShortcuts(shortcutHandlers);
 
+  // Breadcrumb component
+  const Breadcrumbs = () => {
+    if (folderStack.length === 0) return null;
+    return (
+      <div className="flex items-center gap-1 px-3 py-1.5 text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700 overflow-x-auto">
+        <button
+          onClick={() => handleBreadcrumbNav(-1)}
+          className="hover:text-gray-700 dark:hover:text-gray-200 whitespace-nowrap"
+        >
+          Root
+        </button>
+        {folderStack.map((folder, i) => (
+          <span key={folder.id} className="flex items-center gap-1">
+            <ChevronRight className="w-3 h-3 flex-shrink-0" />
+            <button
+              onClick={() => handleBreadcrumbNav(i)}
+              className="hover:text-gray-700 dark:hover:text-gray-200 whitespace-nowrap"
+            >
+              {folder.name}
+            </button>
+          </span>
+        ))}
+      </div>
+    );
+  };
+
+  // Mobile layout
+  if (isMobile) {
+    return (
+      <div className="h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
+        {mobileView === "sidebar" && (
+          <div className="flex-1 overflow-hidden">
+            <Sidebar
+              currentFilter={currentFilter}
+              onFilterChange={handleFilterChange}
+              onNewItem={(type) => {
+                handleNewItem(type);
+              }}
+            />
+          </div>
+        )}
+
+        {mobileView === "list" && (
+          <div className="flex-1 flex flex-col overflow-hidden">
+            <div className="flex items-center gap-2 px-3 py-2 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+              <button
+                onClick={() => setMobileView("sidebar")}
+                className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"
+              >
+                <Menu className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+              </button>
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-200 capitalize">
+                {currentFilter === "all" ? "All Items" : currentFilter.replace("_", " ")}
+              </span>
+            </div>
+            <Breadcrumbs />
+            <div className="flex-1 overflow-hidden">
+              <ItemList
+                items={enrichedItems}
+                selectedId={selectedId}
+                onSelect={handleSelect}
+                searchQuery={searchInput}
+                onSearchChange={setSearchInput}
+                loading={loading}
+                searchInputRef={searchInputRef}
+                hasMore={hasMore}
+                loadingMore={loadingMore}
+                onLoadMore={fetchMore}
+              />
+            </div>
+          </div>
+        )}
+
+        {mobileView === "detail" && (
+          <div className="flex-1 flex flex-col overflow-hidden">
+            <div className="flex items-center gap-2 px-3 py-2 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+              <button
+                onClick={() => setMobileView("list")}
+                className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"
+              >
+                <ArrowLeft className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+              </button>
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-200 truncate">
+                {selectedItem?.name || "Item"}
+              </span>
+            </div>
+            <div className="flex-1 overflow-hidden">
+              <ItemDetail
+                item={selectedItem}
+                onUpdate={handleUpdate}
+                onDelete={handleDelete}
+                onClose={handleCloseDetail}
+                allLabels={allLabels}
+                onAssignLabel={(itemId, labelId) => {
+                  assignLabel(itemId, labelId);
+                  refetch();
+                }}
+                onRemoveLabel={(itemId, labelId) => {
+                  removeLabel(itemId, labelId);
+                  refetch();
+                }}
+              />
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Desktop layout
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
       {/* Sidebar - Navigation */}
@@ -147,19 +321,22 @@ export function ThreeColumnLayout() {
       </div>
 
       {/* Item List */}
-      <div className="w-72 flex-shrink-0">
-        <ItemList
-          items={enrichedItems}
-          selectedId={selectedId}
-          onSelect={setSelectedId}
-          searchQuery={searchInput}
-          onSearchChange={setSearchInput}
-          loading={loading}
-          searchInputRef={searchInputRef}
-          hasMore={hasMore}
-          loadingMore={loadingMore}
-          onLoadMore={fetchMore}
-        />
+      <div className="w-72 flex-shrink-0 flex flex-col">
+        <Breadcrumbs />
+        <div className="flex-1 overflow-hidden">
+          <ItemList
+            items={enrichedItems}
+            selectedId={selectedId}
+            onSelect={handleSelect}
+            searchQuery={searchInput}
+            onSearchChange={setSearchInput}
+            loading={loading}
+            searchInputRef={searchInputRef}
+            hasMore={hasMore}
+            loadingMore={loadingMore}
+            onLoadMore={fetchMore}
+          />
+        </div>
       </div>
 
       {/* Item Detail */}
