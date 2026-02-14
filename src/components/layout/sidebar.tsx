@@ -28,6 +28,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils/cn";
 import { useLabels } from "@/hooks/use-labels";
 import { LabelManager } from "@/components/labels/label-manager";
+import { GuideTip } from "@/components/guide/guide-tip";
 
 interface SidebarProps {
   currentFilter: string;
@@ -89,10 +90,10 @@ export function Sidebar({
   };
 
   return (
-    <div className="flex flex-col h-full bg-gray-100 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700">
+    <div className="flex flex-col h-full bg-surface-secondary border-r border-border">
       {/* Header */}
-      <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-        <h1 className="text-lg font-semibold text-gray-900 dark:text-white">
+      <div className="p-4 border-b border-border">
+        <h1 className="text-lg font-semibold text-foreground">
           HeyJimbo
         </h1>
         {isDemo && (
@@ -104,6 +105,11 @@ export function Sidebar({
 
       {/* New Item Button with Type Selector */}
       <div className="p-4 relative">
+        <GuideTip
+          tipId="new-item"
+          title="Create Items"
+          description="Click to add notes, bookmarks, passwords, and more. Use the dropdown for specific types."
+        >
         <div className="flex gap-1">
           <Button
             onClick={() => onNewItem("note")}
@@ -123,7 +129,7 @@ export function Sidebar({
           </Button>
         </div>
         {showNewMenu && (
-          <div className="absolute left-4 right-4 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg z-10">
+          <div className="absolute left-4 right-4 mt-1 bg-surface border border-border rounded-xl shadow-card-hover z-10 overflow-hidden">
             {newItemTypes.map((t) => {
               const Icon = t.icon;
               return (
@@ -133,7 +139,7 @@ export function Sidebar({
                     onNewItem(t.type);
                     setShowNewMenu(false);
                   }}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 first:rounded-t-md last:rounded-b-md"
+                  className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-neutral-600 hover:bg-surface-hover transition-colors duration-150 first:rounded-t-xl last:rounded-b-xl"
                 >
                   <Icon className="w-4 h-4" />
                   {t.label}
@@ -142,6 +148,7 @@ export function Sidebar({
             })}
           </div>
         )}
+        </GuideTip>
       </div>
 
       {/* Navigation */}
@@ -155,10 +162,10 @@ export function Sidebar({
               key={filter.id}
               onClick={() => onFilterChange(filter.id)}
               className={cn(
-                "w-full flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors",
+                "w-full flex items-center gap-3 px-3 py-2.5 text-[15px] rounded-xl transition-all duration-200",
                 isActive
-                  ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300"
-                  : "text-gray-700 hover:bg-gray-200 dark:text-gray-300 dark:hover:bg-gray-800"
+                  ? "bg-primary-lighter text-primary font-medium"
+                  : "text-neutral-600 hover:bg-surface-hover"
               )}
             >
               <Icon className="w-4 h-4" />
@@ -171,12 +178,12 @@ export function Sidebar({
         {labels.length > 0 && (
           <>
             <div className="pt-3 pb-1 px-3 flex items-center justify-between">
-              <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <span className="text-[11px] font-medium text-neutral-400 uppercase tracking-widest">
                 Labels
               </span>
               <button
                 onClick={() => setShowLabelManager(true)}
-                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                className="text-neutral-400 hover:text-neutral-600 transition-colors duration-150"
               >
                 <Settings className="w-3 h-3" />
               </button>
@@ -188,10 +195,10 @@ export function Sidebar({
                   key={label.id}
                   onClick={() => onFilterChange(`label:${label.id}`)}
                   className={cn(
-                    "w-full flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors",
+                    "w-full flex items-center gap-3 px-3 py-2.5 text-[15px] rounded-xl transition-all duration-200",
                     isActive
-                      ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300"
-                      : "text-gray-700 hover:bg-gray-200 dark:text-gray-300 dark:hover:bg-gray-800"
+                      ? "bg-primary-lighter text-primary font-medium"
+                      : "text-neutral-600 hover:bg-surface-hover"
                   )}
                 >
                   <span
@@ -207,12 +214,12 @@ export function Sidebar({
       </nav>
 
       {/* Footer */}
-      <div className="p-4 border-t border-gray-200 dark:border-gray-700 space-y-1">
+      <div className="p-4 border-t border-border space-y-1">
         <Button
           variant="ghost"
           size="sm"
           onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
-          className="w-full justify-start text-gray-600 dark:text-gray-400"
+          className="w-full justify-start text-neutral-500"
         >
           {resolvedTheme === "dark" ? (
             <Sun className="w-4 h-4 mr-2" />
@@ -227,7 +234,7 @@ export function Sidebar({
               variant="ghost"
               size="sm"
               onClick={() => router.push("/dashboard/import")}
-              className="w-full justify-start text-gray-600 dark:text-gray-400"
+              className="w-full justify-start text-neutral-500"
             >
               <Import className="w-4 h-4 mr-2" />
               Import
@@ -238,7 +245,7 @@ export function Sidebar({
               onClick={() => {
                 window.open("/api/export?format=json", "_blank");
               }}
-              className="w-full justify-start text-gray-600 dark:text-gray-400"
+              className="w-full justify-start text-neutral-500"
             >
               <Download className="w-4 h-4 mr-2" />
               Export
@@ -247,7 +254,7 @@ export function Sidebar({
               variant="ghost"
               size="sm"
               onClick={() => router.push("/dashboard/stats")}
-              className="w-full justify-start text-gray-600 dark:text-gray-400"
+              className="w-full justify-start text-neutral-500"
             >
               <BarChart3 className="w-4 h-4 mr-2" />
               Dashboard
@@ -257,8 +264,17 @@ export function Sidebar({
         <Button
           variant="ghost"
           size="sm"
+          onClick={() => router.push("/dashboard/settings")}
+          className="w-full justify-start text-neutral-500"
+        >
+          <Settings className="w-4 h-4 mr-2" />
+          Settings
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
           onClick={handleSignOut}
-          className="w-full justify-start text-gray-600 dark:text-gray-400"
+          className="w-full justify-start text-neutral-500"
         >
           <LogOut className="w-4 h-4 mr-2" />
           Sign out

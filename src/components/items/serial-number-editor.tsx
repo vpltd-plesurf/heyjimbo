@@ -28,7 +28,7 @@ export function SerialNumberEditor({
   return (
     <div className="space-y-4">
       <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+        <label className="block text-sm font-medium text-neutral-600 mb-1">
           Serial Number
         </label>
         <Input
@@ -40,7 +40,7 @@ export function SerialNumberEditor({
         />
       </div>
       <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+        <label className="block text-sm font-medium text-neutral-600 mb-1">
           Owner Name
         </label>
         <Input
@@ -51,7 +51,7 @@ export function SerialNumberEditor({
         />
       </div>
       <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+        <label className="block text-sm font-medium text-neutral-600 mb-1">
           Owner Email
         </label>
         <Input
@@ -63,7 +63,7 @@ export function SerialNumberEditor({
         />
       </div>
       <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+        <label className="block text-sm font-medium text-neutral-600 mb-1">
           Organization
         </label>
         <Input

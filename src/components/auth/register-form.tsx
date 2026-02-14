@@ -58,7 +58,7 @@ export function RegisterForm() {
   if (success) {
     return (
       <div className="mt-8 space-y-6 text-center">
-        <div className="bg-green-50 dark:bg-green-900/50 text-green-600 dark:text-green-400 p-4 rounded-md">
+        <div className="bg-secondary-lighter text-secondary p-4 rounded-xl">
           <h3 className="font-medium">Check your email</h3>
           <p className="mt-1 text-sm">
             We&apos;ve sent you a confirmation link. Please check your email to
@@ -75,7 +75,7 @@ export function RegisterForm() {
   return (
     <form onSubmit={handleSubmit} className="mt-8 space-y-6">
       {error && (
-        <div className="bg-red-50 dark:bg-red-900/50 text-red-600 dark:text-red-400 p-3 rounded-md text-sm">
+        <div className="bg-rose-lighter text-rose p-3 rounded-xl text-sm">
           {error}
         </div>
       )}
@@ -84,7 +84,7 @@ export function RegisterForm() {
         <div>
           <label
             htmlFor="email"
-            className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+            className="block text-sm font-medium text-neutral-600"
           >
             Email address
           </label>
@@ -104,7 +104,7 @@ export function RegisterForm() {
         <div>
           <label
             htmlFor="password"
-            className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+            className="block text-sm font-medium text-neutral-600"
           >
             Password
           </label>
@@ -124,7 +124,7 @@ export function RegisterForm() {
         <div>
           <label
             htmlFor="confirmPassword"
-            className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+            className="block text-sm font-medium text-neutral-600"
           >
             Confirm password
           </label>
@@ -146,11 +146,11 @@ export function RegisterForm() {
         {loading ? "Creating account..." : "Create account"}
       </Button>
 
-      <p className="text-center text-sm text-gray-600 dark:text-gray-400">
+      <p className="text-center text-sm text-neutral-500">
         Already have an account?{" "}
         <Link
           href="/login"
-          className="font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400"
+          className="font-medium text-primary hover:text-primary/80"
         >
           Sign in
         </Link>

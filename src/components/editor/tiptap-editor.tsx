@@ -48,7 +48,7 @@ export function TipTapEditor({
       }),
       Link.configure({
         openOnClick: false,
-        HTMLAttributes: { class: "text-indigo-500 underline" },
+        HTMLAttributes: { class: "text-primary underline" },
       }),
       Placeholder.configure({
         placeholder: "Start writing...",
@@ -115,8 +115,8 @@ export function TipTapEditor({
       onClick={onClick}
       title={title}
       className={cn(
-        "p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors",
-        isActive && "bg-gray-200 dark:bg-gray-600"
+        "p-1.5 rounded hover:bg-surface-hover transition-colors",
+        isActive && "bg-surface-hover"
       )}
     >
       {children}
@@ -126,7 +126,7 @@ export function TipTapEditor({
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       {editable && (
-        <div className="flex items-center gap-0.5 pb-2 mb-2 border-b border-gray-200 dark:border-gray-700 flex-wrap">
+        <div className="flex items-center gap-0.5 pb-2 mb-2 border-b border-border flex-wrap">
           <ToolbarButton
             onClick={() => editor.chain().focus().toggleBold().run()}
             isActive={editor.isActive("bold")}
@@ -150,7 +150,7 @@ export function TipTapEditor({
           >
             <Heading2 className="w-4 h-4" />
           </ToolbarButton>
-          <div className="w-px h-5 bg-gray-200 dark:bg-gray-700 mx-0.5" />
+          <div className="w-px h-5 bg-border mx-0.5" />
           <ToolbarButton
             onClick={() => editor.chain().focus().toggleBulletList().run()}
             isActive={editor.isActive("bulletList")}
@@ -172,7 +172,7 @@ export function TipTapEditor({
           >
             <CheckSquare className="w-4 h-4" />
           </ToolbarButton>
-          <div className="w-px h-5 bg-gray-200 dark:bg-gray-700 mx-0.5" />
+          <div className="w-px h-5 bg-border mx-0.5" />
           <ToolbarButton
             onClick={() => editor.chain().focus().toggleCodeBlock().run()}
             isActive={editor.isActive("codeBlock")}
@@ -194,7 +194,7 @@ export function TipTapEditor({
           >
             <LinkIcon className="w-4 h-4" />
           </ToolbarButton>
-          <div className="w-px h-5 bg-gray-200 dark:bg-gray-700 mx-0.5" />
+          <div className="w-px h-5 bg-border mx-0.5" />
           <ToolbarButton
             onClick={() => editor.chain().focus().undo().run()}
             title="Undo"

@@ -1,8 +1,9 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import { DemoProvider } from "@/lib/demo-context";
 import { MasterPasswordProvider } from "@/contexts/master-password-context";
 import { ThemeProvider } from "@/contexts/theme-context";
+import { GuideProvider } from "@/contexts/guide-context";
 import "./globals.css";
 
 const inter = Inter({
@@ -14,12 +15,15 @@ export const metadata: Metadata = {
   title: "HeyJimbo",
   description: "Personal information organizer",
   manifest: "/manifest.json",
-  themeColor: "#6366f1",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
     title: "HeyJimbo",
   },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#8b7ec8",
 };
 
 export default function RootLayout({
@@ -40,9 +44,11 @@ export default function RootLayout({
           }}
         />
         <ThemeProvider>
-          <DemoProvider>
-            <MasterPasswordProvider>{children}</MasterPasswordProvider>
-          </DemoProvider>
+          <GuideProvider>
+            <DemoProvider>
+              <MasterPasswordProvider>{children}</MasterPasswordProvider>
+            </DemoProvider>
+          </GuideProvider>
         </ThemeProvider>
       </body>
     </html>

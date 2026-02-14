@@ -50,7 +50,7 @@ export function LoginForm() {
   if (isDemo) {
     return (
       <div className="mt-8 space-y-6 text-center">
-        <div className="bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 p-4 rounded-md">
+        <div className="bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 p-4 rounded-xl">
           <p className="font-medium">Demo Mode</p>
           <p className="mt-1 text-sm">
             No Supabase configured. Your data will be stored locally in the browser.
@@ -69,7 +69,7 @@ export function LoginForm() {
   return (
     <form onSubmit={handleSubmit} className="mt-8 space-y-6">
       {error && (
-        <div className="bg-red-50 dark:bg-red-900/50 text-red-600 dark:text-red-400 p-3 rounded-md text-sm">
+        <div className="bg-rose-lighter text-rose p-3 rounded-xl text-sm">
           {error}
         </div>
       )}
@@ -78,7 +78,7 @@ export function LoginForm() {
         <div>
           <label
             htmlFor="email"
-            className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+            className="block text-sm font-medium text-neutral-600"
           >
             Email address
           </label>
@@ -98,7 +98,7 @@ export function LoginForm() {
         <div>
           <label
             htmlFor="password"
-            className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+            className="block text-sm font-medium text-neutral-600"
           >
             Password
           </label>
@@ -120,11 +120,11 @@ export function LoginForm() {
         {loading ? "Signing in..." : "Sign in"}
       </Button>
 
-      <p className="text-center text-sm text-gray-600 dark:text-gray-400">
+      <p className="text-center text-sm text-neutral-500">
         Don&apos;t have an account?{" "}
         <Link
           href="/register"
-          className="font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400"
+          className="font-medium text-primary hover:text-primary/80"
         >
           Register
         </Link>

@@ -70,16 +70,16 @@ export function AttachmentList({ itemId }: { itemId: string }) {
   };
 
   return (
-    <div className="border-t border-gray-200 dark:border-gray-700">
+    <div className="border-t border-border">
       <button
         onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center justify-between px-4 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"
+        className="w-full flex items-center justify-between px-4 py-2 text-xs font-medium text-neutral-500 hover:bg-surface-hover transition-colors duration-150"
       >
         <span className="flex items-center gap-1.5">
           <Paperclip className="w-3.5 h-3.5" />
           Attachments {attachments.length > 0 && `(${attachments.length})`}
         </span>
-        <span>{expanded ? "−" : "+"}</span>
+        <span>{expanded ? "\u2212" : "+"}</span>
       </button>
 
       {expanded && (
@@ -110,26 +110,26 @@ export function AttachmentList({ itemId }: { itemId: string }) {
 
           {/* File list */}
           {attachments.length === 0 ? (
-            <p className="text-xs text-gray-400">No attachments</p>
+            <p className="text-xs text-neutral-400">No attachments</p>
           ) : (
             <ul className="space-y-1">
               {attachments.map((att) => (
                 <li
                   key={att.id}
-                  className="flex items-center justify-between gap-2 py-1 px-2 rounded text-xs bg-gray-50 dark:bg-gray-800"
+                  className="flex items-center justify-between gap-2 py-1 px-2 rounded-xl text-xs bg-surface-secondary"
                 >
                   <div className="flex items-center gap-1.5 min-w-0">
-                    <FileIcon className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
-                    <span className="truncate text-gray-700 dark:text-gray-300">
+                    <FileIcon className="w-3.5 h-3.5 text-neutral-400 flex-shrink-0" />
+                    <span className="truncate text-foreground">
                       {att.file_name}
                     </span>
-                    <span className="text-gray-400 flex-shrink-0">
+                    <span className="text-neutral-400 flex-shrink-0">
                       {formatFileSize(att.file_size)}
                     </span>
                   </div>
                   <button
                     onClick={() => handleDelete(att.id)}
-                    className="text-gray-400 hover:text-red-500 flex-shrink-0"
+                    className="text-neutral-400 hover:text-red-500 transition-colors duration-150 flex-shrink-0"
                   >
                     <Trash2 className="w-3 h-3" />
                   </button>

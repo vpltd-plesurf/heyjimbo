@@ -33,7 +33,7 @@ export function PasswordEditor({
   return (
     <div className="space-y-4">
       <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+        <label className="block text-sm font-medium text-neutral-600 mb-1">
           Location / Website
         </label>
         <Input
@@ -44,7 +44,7 @@ export function PasswordEditor({
         />
       </div>
       <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+        <label className="block text-sm font-medium text-neutral-600 mb-1">
           Account / Username
         </label>
         <Input
@@ -55,13 +55,13 @@ export function PasswordEditor({
         />
       </div>
       <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+        <label className="block text-sm font-medium text-neutral-600 mb-1">
           Password
         </label>
         {isEncryptionLocked ? (
           <button
             onClick={onRequestUnlock}
-            className="w-full flex items-center gap-2 px-3 py-2 rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-sm text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-xl border border-border bg-surface-secondary text-sm text-neutral-500 hover:bg-surface-hover transition-colors"
           >
             <Lock className="w-4 h-4" />
             Enter master password to view

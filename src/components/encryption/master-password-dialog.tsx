@@ -55,14 +55,14 @@ export function MasterPasswordDialog({ onUnlocked }: MasterPasswordDialogProps) 
 
   return (
     <div className="flex flex-col items-center justify-center p-8 max-w-sm mx-auto">
-      <div className="w-12 h-12 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center mb-4">
-        <Lock className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
+      <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+        <Lock className="w-6 h-6 text-primary" />
       </div>
 
-      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
+      <h3 className="text-lg font-semibold text-foreground mb-1">
         {isSetup ? "Set Up Master Password" : "Enter Master Password"}
       </h3>
-      <p className="text-sm text-gray-500 dark:text-gray-400 text-center mb-6">
+      <p className="text-sm text-neutral-500 text-center mb-6">
         {isSetup
           ? "Create a master password to encrypt your saved passwords. This cannot be recovered if forgotten."
           : "Enter your master password to view and edit encrypted passwords."}
@@ -87,7 +87,7 @@ export function MasterPasswordDialog({ onUnlocked }: MasterPasswordDialogProps) 
         )}
 
         {error && (
-          <div className="flex items-center gap-2 text-sm text-red-600 dark:text-red-400">
+          <div className="flex items-center gap-2 text-sm text-rose">
             <AlertCircle className="w-4 h-4 flex-shrink-0" />
             {error}
           </div>

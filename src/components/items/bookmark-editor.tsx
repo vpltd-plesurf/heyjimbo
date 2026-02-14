@@ -20,7 +20,7 @@ export function BookmarkEditor({
   return (
     <div className="space-y-4">
       <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+        <label className="block text-sm font-medium text-neutral-600 mb-1">
           URL
         </label>
         <Input
@@ -32,7 +32,7 @@ export function BookmarkEditor({
         />
       </div>
       <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+        <label className="block text-sm font-medium text-neutral-600 mb-1">
           Source URL
         </label>
         <Input

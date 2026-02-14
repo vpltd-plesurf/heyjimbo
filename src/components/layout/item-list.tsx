@@ -91,9 +91,9 @@ export function ItemList({
   }, [hasMore, loadingMore, onLoadMore]);
 
   return (
-    <div className="flex flex-col h-full bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700">
+    <div className="flex flex-col h-full bg-surface-secondary border-r border-border">
       {/* Search */}
-      <div className="p-3 border-b border-gray-200 dark:border-gray-700">
+      <div className="p-3 border-b border-border">
         <div className="relative">
           <Input
             ref={searchInputRef}
@@ -106,14 +106,14 @@ export function ItemList({
           {searchQuery && (
             <button
               onClick={() => onSearchChange("")}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 transition-colors duration-150"
             >
               <X className="w-3.5 h-3.5" />
             </button>
           )}
         </div>
         {searchQuery && !loading && (
-          <p className="text-xs text-gray-400 mt-1">
+          <p className="text-xs text-neutral-400 mt-1">
             {items.length} result{items.length !== 1 ? "s" : ""}
           </p>
         )}
@@ -122,105 +122,112 @@ export function ItemList({
       {/* Items List */}
       <div className="flex-1 overflow-y-auto">
         {loading ? (
-          <div className="p-4 text-center text-gray-500">Loading...</div>
+          <div className="p-2 space-y-1">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="rounded-xl bg-surface p-4 animate-pulse">
+                <div className="h-4 bg-neutral-200 rounded-lg w-2/3 mb-2" />
+                <div className="h-3 bg-neutral-200 rounded-lg w-1/2" />
+              </div>
+            ))}
+          </div>
         ) : items.length === 0 ? (
-          <div className="p-4 text-center text-gray-500">No items found</div>
+          <div className="p-4 text-center text-neutral-400">No items found</div>
         ) : (
           <>
-            <ul className="divide-y divide-gray-100 dark:divide-gray-700">
+            <div className="p-2 space-y-1">
               {items.map((item) => {
                 const Icon = typeIcons[item.type] || FileText;
                 const isFolder = item.type === "folder";
                 const isDragOver = dragOverId === item.id;
                 return (
-                  <li key={item.id}>
-                    <button
-                      onClick={() => onSelect(item.id)}
-                      draggable={!isFolder}
-                      onDragStart={(e) => {
-                        e.dataTransfer.setData("text/plain", item.id);
-                        e.dataTransfer.effectAllowed = "move";
-                      }}
-                      onDragOver={(e) => {
-                        if (isFolder) {
-                          e.preventDefault();
-                          e.dataTransfer.dropEffect = "move";
-                          setDragOverId(item.id);
-                        }
-                      }}
-                      onDragLeave={() => setDragOverId(null)}
-                      onDrop={(e) => {
+                  <button
+                    key={item.id}
+                    onClick={() => onSelect(item.id)}
+                    draggable={!isFolder}
+                    onDragStart={(e) => {
+                      e.dataTransfer.setData("text/plain", item.id);
+                      e.dataTransfer.effectAllowed = "move";
+                    }}
+                    onDragOver={(e) => {
+                      if (isFolder) {
                         e.preventDefault();
-                        setDragOverId(null);
-                        if (isFolder && onMoveToFolder) {
-                          const draggedId = e.dataTransfer.getData("text/plain");
-                          if (draggedId && draggedId !== item.id) {
-                            onMoveToFolder(draggedId, item.id);
-                          }
+                        e.dataTransfer.dropEffect = "move";
+                        setDragOverId(item.id);
+                      }
+                    }}
+                    onDragLeave={() => setDragOverId(null)}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      setDragOverId(null);
+                      if (isFolder && onMoveToFolder) {
+                        const draggedId = e.dataTransfer.getData("text/plain");
+                        if (draggedId && draggedId !== item.id) {
+                          onMoveToFolder(draggedId, item.id);
                         }
-                      }}
-                      className={cn(
-                        "w-full text-left p-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors",
-                        selectedId === item.id &&
-                          "bg-indigo-50 dark:bg-indigo-900/30 border-l-2 border-indigo-500",
-                        isDragOver && "bg-indigo-100 dark:bg-indigo-900/50 ring-2 ring-indigo-400"
-                      )}
-                    >
-                      <div className="flex items-start gap-2">
-                        <Icon className="w-4 h-4 mt-0.5 text-gray-400 flex-shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium text-sm text-gray-900 dark:text-white truncate">
-                              {item.name}
-                            </span>
-                            {item.is_flagged && (
-                              <Flag className="w-3 h-3 text-orange-500 flex-shrink-0" />
+                      }
+                    }}
+                    className={cn(
+                      "w-full text-left p-4 rounded-xl shadow-card transition-all duration-200 hover:shadow-card-hover hover:translate-y-[-1px]",
+                      selectedId === item.id
+                        ? "bg-primary-lighter ring-1 ring-primary/30"
+                        : "bg-surface hover:bg-surface-hover",
+                      isDragOver && "bg-primary-lighter ring-2 ring-primary/40"
+                    )}
+                  >
+                    <div className="flex items-start gap-2">
+                      <Icon className="w-4 h-4 mt-0.5 text-neutral-400 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-[15px] text-foreground truncate">
+                            {item.name}
+                          </span>
+                          {item.is_flagged && (
+                            <Flag className="w-3 h-3 text-orange-500 flex-shrink-0" />
+                          )}
+                        </div>
+                        <p className="text-sm text-neutral-500 truncate mt-0.5">
+                          {getPreview(item)}
+                        </p>
+                        {item.labels && item.labels.length > 0 && (
+                          <div className="flex gap-1 mt-1 flex-wrap">
+                            {item.labels.slice(0, 2).map((label) => (
+                              <span
+                                key={label.id}
+                                className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] bg-surface-secondary text-neutral-500"
+                              >
+                                <span
+                                  className="w-1.5 h-1.5 rounded-full"
+                                  style={{ backgroundColor: label.color }}
+                                />
+                                {label.name}
+                              </span>
+                            ))}
+                            {item.labels.length > 2 && (
+                              <span className="text-[10px] text-neutral-400">
+                                +{item.labels.length - 2}
+                              </span>
                             )}
                           </div>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">
-                            {getPreview(item)}
-                          </p>
-                          {item.labels && item.labels.length > 0 && (
-                            <div className="flex gap-1 mt-0.5 flex-wrap">
-                              {item.labels.slice(0, 2).map((label) => (
-                                <span
-                                  key={label.id}
-                                  className="inline-flex items-center gap-0.5 px-1 py-0 rounded text-[10px] bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400"
-                                >
-                                  <span
-                                    className="w-1.5 h-1.5 rounded-full"
-                                    style={{ backgroundColor: label.color }}
-                                  />
-                                  {label.name}
-                                </span>
-                              ))}
-                              {item.labels.length > 2 && (
-                                <span className="text-[10px] text-gray-400">
-                                  +{item.labels.length - 2}
-                                </span>
-                              )}
-                            </div>
-                          )}
-                          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                            {item.is_trashed && item.trashed_at
-                              ? (() => {
-                                  const daysLeft = Math.max(0, 30 - Math.floor((Date.now() - new Date(item.trashed_at).getTime()) / (1000 * 60 * 60 * 24)));
-                                  return <span className="text-red-400">{daysLeft}d until auto-delete</span>;
-                                })()
-                              : isValid(new Date(item.updated_at))
-                                ? format(new Date(item.updated_at), "MMM d, yyyy")
-                                : "Unknown date"}
-                          </p>
-                        </div>
+                        )}
+                        <p className="text-xs text-neutral-400 mt-1">
+                          {item.is_trashed && item.trashed_at
+                            ? (() => {
+                                const daysLeft = Math.max(0, 30 - Math.floor((Date.now() - new Date(item.trashed_at).getTime()) / (1000 * 60 * 60 * 24)));
+                                return <span className="text-rose">{daysLeft}d until auto-delete</span>;
+                              })()
+                            : isValid(new Date(item.updated_at))
+                              ? format(new Date(item.updated_at), "MMM d, yyyy")
+                              : "Unknown date"}
+                        </p>
                       </div>
-                    </button>
-                  </li>
+                    </div>
+                  </button>
                 );
               })}
-            </ul>
+            </div>
             {/* Infinite scroll sentinel */}
             {hasMore && (
-              <div ref={sentinelRef} className="p-3 text-center text-xs text-gray-400">
+              <div ref={sentinelRef} className="p-3 text-center text-xs text-neutral-400">
                 {loadingMore ? "Loading more..." : ""}
               </div>
             )}

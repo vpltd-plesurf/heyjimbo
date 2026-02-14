@@ -41,10 +41,10 @@ export function LabelPicker({
             className="fixed inset-0 z-10"
             onClick={() => setIsOpen(false)}
           />
-          <div className="absolute top-full left-0 mt-1 z-20 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg p-2 min-w-[180px]">
+          <div className="absolute top-full left-0 mt-1 z-20 bg-surface border border-border rounded-xl shadow-card-hover p-2 min-w-[180px]">
             {assignedLabels.length > 0 && (
               <div className="mb-2 space-y-1">
-                <p className="text-xs text-gray-500 font-medium px-1">
+                <p className="text-xs text-neutral-400 font-medium px-1">
                   Assigned
                 </p>
                 {assignedLabels.map((label) => (
@@ -61,9 +61,9 @@ export function LabelPicker({
             {unassigned.length > 0 && (
               <div className="space-y-0.5">
                 {assignedLabels.length > 0 && (
-                  <div className="border-t border-gray-200 dark:border-gray-700 my-1" />
+                  <div className="border-t border-border my-1" />
                 )}
-                <p className="text-xs text-gray-500 font-medium px-1">
+                <p className="text-xs text-neutral-400 font-medium px-1">
                   Add label
                 </p>
                 {unassigned.map((label) => (
@@ -72,7 +72,7 @@ export function LabelPicker({
                     onClick={() => {
                       onAssign(label.id);
                     }}
-                    className="w-full flex items-center gap-2 px-2 py-1 text-sm rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-left"
+                    className="w-full flex items-center gap-2 px-2 py-1 text-sm rounded-xl hover:bg-surface-hover transition-colors duration-150 text-left"
                   >
                     <span
                       className="w-2.5 h-2.5 rounded-full flex-shrink-0"
@@ -85,7 +85,7 @@ export function LabelPicker({
             )}
 
             {allLabels.length === 0 && (
-              <p className="text-xs text-gray-500 px-1">No labels available</p>
+              <p className="text-xs text-neutral-400 px-1">No labels available</p>
             )}
           </div>
         </>

@@ -1,5 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  experimental: {
+    serverActions: { bodySizeLimit: "50mb" },
+  },
   // sql.js uses WASM — allow it in server-side API routes
   webpack: (config, { isServer }) => {
     if (isServer) {

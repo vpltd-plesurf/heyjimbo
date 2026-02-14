@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { Flag, Trash2, RotateCcw, X, Lock, Unlock } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { TipTapEditor } from "@/components/editor/tiptap-editor";
@@ -192,8 +193,8 @@ export function ItemDetail({
 
   if (!item) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <p className="text-gray-500 dark:text-gray-400">
+      <div className="flex-1 flex items-center justify-center bg-background">
+        <p className="text-neutral-400">
           Select an item to view details
         </p>
       </div>
@@ -221,8 +222,8 @@ export function ItemDetail({
   // Show master password dialog inline for password items
   if (showMasterPasswordDialog) {
     return (
-      <div className="flex-1 flex flex-col bg-white dark:bg-gray-800">
-        <div className="flex items-center justify-end p-4 border-b border-gray-200 dark:border-gray-700">
+      <div className="flex-1 flex flex-col bg-surface">
+        <div className="flex items-center justify-end p-4 border-b border-border">
           <Button variant="ghost" size="icon" onClick={() => setShowMasterPasswordDialog(false)}>
             <X className="w-4 h-4" />
           </Button>
@@ -237,165 +238,174 @@ export function ItemDetail({
   }
 
   return (
-    <div className="flex-1 flex flex-col bg-white dark:bg-gray-800">
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleToggleFlag}
-            className={cn(item.is_flagged && "text-orange-500")}
-          >
-            <Flag className="w-4 h-4" />
-          </Button>
-          {item.is_trashed ? (
-            <>
-              <Button variant="ghost" size="icon" onClick={handleRestore}>
-                <RotateCcw className="w-4 h-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handlePermanentDelete}
-                className="text-red-500"
-              >
-                <Trash2 className="w-4 h-4" />
-              </Button>
-            </>
-          ) : (
-            <Button variant="ghost" size="icon" onClick={handleMoveToTrash}>
-              <Trash2 className="w-4 h-4" />
-            </Button>
-          )}
-          {onAssignLabel && onRemoveLabel && (
-            <LabelPicker
-              allLabels={allLabels}
-              assignedLabels={item.labels || []}
-              onAssign={(labelId) => onAssignLabel(item.id, labelId)}
-              onRemove={(labelId) => onRemoveLabel(item.id, labelId)}
-            />
-          )}
-          {/* Lock/Unlock button for password items */}
-          {item.type === "password" && (
+    <AnimatePresence mode="wait">
+      <motion.div
+        key={item.id}
+        initial={{ opacity: 0, y: 4 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.15 }}
+        className="flex-1 flex flex-col bg-surface"
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b border-border">
+          <div className="flex items-center gap-2">
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => {
-                if (isUnlocked) {
-                  lock();
-                } else {
-                  setShowMasterPasswordDialog(true);
-                }
-              }}
-              className={cn(isUnlocked ? "text-green-500" : "text-gray-400")}
-              title={isUnlocked ? "Lock passwords" : "Unlock passwords"}
+              onClick={handleToggleFlag}
+              className={cn(item.is_flagged && "text-orange-500")}
             >
-              {isUnlocked ? <Unlock className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
+              <Flag className="w-4 h-4" />
             </Button>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-gray-400 capitalize">{item.type.replace("_", " ")}</span>
-          <Button variant="ghost" size="icon" onClick={onClose}>
-            <X className="w-4 h-4" />
-          </Button>
-        </div>
-      </div>
-
-      {/* Content */}
-      <div className="flex-1 flex flex-col p-4 overflow-hidden">
-        {/* Title */}
-        <Input
-          value={name}
-          onChange={(e) => {
-            setName(e.target.value);
-            markDirty();
-          }}
-          onBlur={handleBlur}
-          placeholder="Untitled"
-          className="text-xl font-semibold border-0 p-0 h-auto focus:ring-0 bg-transparent"
-          disabled={item.is_trashed}
-        />
-
-        {/* Type-specific editor */}
-        <div className="flex-1 mt-4 overflow-hidden" onBlur={handleBlur}>
-          {item.type === "note" && (
-            <TipTapEditor
-              content={content}
-              onChange={(html) => {
-                setContent(html);
-                markDirty();
-              }}
-              editable={!item.is_trashed}
-            />
-          )}
-
-          {item.type === "bookmark" && (
-            <BookmarkEditor
-              url={bookmarkUrl}
-              sourceUrl={bookmarkSourceUrl}
-              onUrlChange={(v) => { setBookmarkUrl(v); markDirty(); }}
-              onSourceUrlChange={(v) => { setBookmarkSourceUrl(v); markDirty(); }}
-              disabled={item.is_trashed}
-            />
-          )}
-
-          {item.type === "password" && (
-            <PasswordEditor
-              location={pwLocation}
-              account={pwAccount}
-              password={pwPassword}
-              onLocationChange={(v) => { setPwLocation(v); markDirty(); }}
-              onAccountChange={(v) => { setPwAccount(v); markDirty(); }}
-              onPasswordChange={(v) => { setPwPassword(v); markDirty(); }}
-              disabled={item.is_trashed}
-              isEncryptionLocked={passwordNeedsUnlock}
-              onRequestUnlock={() => setShowMasterPasswordDialog(true)}
-            />
-          )}
-
-          {item.type === "serial_number" && (
-            <SerialNumberEditor
-              serialNumber={snSerialNumber}
-              ownerName={snOwnerName}
-              ownerEmail={snOwnerEmail}
-              organization={snOrganization}
-              onSerialNumberChange={(v) => { setSnSerialNumber(v); markDirty(); }}
-              onOwnerNameChange={(v) => { setSnOwnerName(v); markDirty(); }}
-              onOwnerEmailChange={(v) => { setSnOwnerEmail(v); markDirty(); }}
-              onOrganizationChange={(v) => { setSnOrganization(v); markDirty(); }}
-              disabled={item.is_trashed}
-            />
-          )}
-
-          {item.type === "software_license" && (
-            <SoftwareLicenseEditor
-              licenseKey={slLicenseKey}
-              licenseTo={slLicenseTo}
-              email={slEmail}
-              purchaseDate={slPurchaseDate}
-              notes={slNotes}
-              onLicenseKeyChange={(v) => { setSlLicenseKey(v); markDirty(); }}
-              onLicenseToChange={(v) => { setSlLicenseTo(v); markDirty(); }}
-              onEmailChange={(v) => { setSlEmail(v); markDirty(); }}
-              onPurchaseDateChange={(v) => { setSlPurchaseDate(v); markDirty(); }}
-              onNotesChange={(v) => { setSlNotes(v); markDirty(); }}
-              disabled={item.is_trashed}
-            />
-          )}
+            {item.is_trashed ? (
+              <>
+                <Button variant="ghost" size="icon" onClick={handleRestore}>
+                  <RotateCcw className="w-4 h-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handlePermanentDelete}
+                  className="text-red-500"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              </>
+            ) : (
+              <Button variant="ghost" size="icon" onClick={handleMoveToTrash}>
+                <Trash2 className="w-4 h-4" />
+              </Button>
+            )}
+            {onAssignLabel && onRemoveLabel && (
+              <LabelPicker
+                allLabels={allLabels}
+                assignedLabels={item.labels || []}
+                onAssign={(labelId) => onAssignLabel(item.id, labelId)}
+                onRemove={(labelId) => onRemoveLabel(item.id, labelId)}
+              />
+            )}
+            {/* Lock/Unlock button for password items */}
+            {item.type === "password" && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => {
+                  if (isUnlocked) {
+                    lock();
+                  } else {
+                    setShowMasterPasswordDialog(true);
+                  }
+                }}
+                className={cn(isUnlocked ? "text-green-500" : "text-neutral-400")}
+                title={isUnlocked ? "Lock passwords" : "Unlock passwords"}
+              >
+                {isUnlocked ? <Unlock className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
+              </Button>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-neutral-400 capitalize">{item.type.replace("_", " ")}</span>
+            <Button variant="ghost" size="icon" onClick={onClose}>
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
 
-        {/* Status indicator */}
-        {isDirty && (
-          <p className="text-xs text-gray-400 mt-2">Saving...</p>
+        {/* Content */}
+        <div className="flex-1 flex flex-col p-4 overflow-hidden">
+          {/* Title */}
+          <Input
+            value={name}
+            onChange={(e) => {
+              setName(e.target.value);
+              markDirty();
+            }}
+            onBlur={handleBlur}
+            placeholder="Untitled"
+            className="text-xl font-semibold border-0 p-0 h-auto focus:ring-0 bg-transparent"
+            disabled={item.is_trashed}
+          />
+
+          {/* Type-specific editor */}
+          <div className="flex-1 mt-4 overflow-hidden" onBlur={handleBlur}>
+            {item.type === "note" && (
+              <TipTapEditor
+                content={content}
+                onChange={(html) => {
+                  setContent(html);
+                  markDirty();
+                }}
+                editable={!item.is_trashed}
+              />
+            )}
+
+            {item.type === "bookmark" && (
+              <BookmarkEditor
+                url={bookmarkUrl}
+                sourceUrl={bookmarkSourceUrl}
+                onUrlChange={(v) => { setBookmarkUrl(v); markDirty(); }}
+                onSourceUrlChange={(v) => { setBookmarkSourceUrl(v); markDirty(); }}
+                disabled={item.is_trashed}
+              />
+            )}
+
+            {item.type === "password" && (
+              <PasswordEditor
+                location={pwLocation}
+                account={pwAccount}
+                password={pwPassword}
+                onLocationChange={(v) => { setPwLocation(v); markDirty(); }}
+                onAccountChange={(v) => { setPwAccount(v); markDirty(); }}
+                onPasswordChange={(v) => { setPwPassword(v); markDirty(); }}
+                disabled={item.is_trashed}
+                isEncryptionLocked={passwordNeedsUnlock}
+                onRequestUnlock={() => setShowMasterPasswordDialog(true)}
+              />
+            )}
+
+            {item.type === "serial_number" && (
+              <SerialNumberEditor
+                serialNumber={snSerialNumber}
+                ownerName={snOwnerName}
+                ownerEmail={snOwnerEmail}
+                organization={snOrganization}
+                onSerialNumberChange={(v) => { setSnSerialNumber(v); markDirty(); }}
+                onOwnerNameChange={(v) => { setSnOwnerName(v); markDirty(); }}
+                onOwnerEmailChange={(v) => { setSnOwnerEmail(v); markDirty(); }}
+                onOrganizationChange={(v) => { setSnOrganization(v); markDirty(); }}
+                disabled={item.is_trashed}
+              />
+            )}
+
+            {item.type === "software_license" && (
+              <SoftwareLicenseEditor
+                licenseKey={slLicenseKey}
+                licenseTo={slLicenseTo}
+                email={slEmail}
+                purchaseDate={slPurchaseDate}
+                notes={slNotes}
+                onLicenseKeyChange={(v) => { setSlLicenseKey(v); markDirty(); }}
+                onLicenseToChange={(v) => { setSlLicenseTo(v); markDirty(); }}
+                onEmailChange={(v) => { setSlEmail(v); markDirty(); }}
+                onPurchaseDateChange={(v) => { setSlPurchaseDate(v); markDirty(); }}
+                onNotesChange={(v) => { setSlNotes(v); markDirty(); }}
+                disabled={item.is_trashed}
+              />
+            )}
+          </div>
+
+          {/* Status indicator */}
+          {isDirty && (
+            <p className="text-xs text-neutral-400 mt-2">Saving...</p>
+          )}
+        </div>
+
+        {/* Attachments (production only, non-folder items) */}
+        {!isDemo && item.type !== "folder" && (
+          <AttachmentList itemId={item.id} />
         )}
-      </div>
-
-      {/* Attachments (production only, non-folder items) */}
-      {!isDemo && item.type !== "folder" && (
-        <AttachmentList itemId={item.id} />
-      )}
-    </div>
+      </motion.div>
+    </AnimatePresence>
   );
 }

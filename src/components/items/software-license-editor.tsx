@@ -32,7 +32,7 @@ export function SoftwareLicenseEditor({
   return (
     <div className="space-y-4">
       <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+        <label className="block text-sm font-medium text-neutral-600 mb-1">
           License Key
         </label>
         <Input
@@ -44,7 +44,7 @@ export function SoftwareLicenseEditor({
         />
       </div>
       <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+        <label className="block text-sm font-medium text-neutral-600 mb-1">
           Licensed To
         </label>
         <Input
@@ -55,7 +55,7 @@ export function SoftwareLicenseEditor({
         />
       </div>
       <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+        <label className="block text-sm font-medium text-neutral-600 mb-1">
           Email
         </label>
         <Input
@@ -67,7 +67,7 @@ export function SoftwareLicenseEditor({
         />
       </div>
       <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+        <label className="block text-sm font-medium text-neutral-600 mb-1">
           Purchase Date
         </label>
         <Input
@@ -78,7 +78,7 @@ export function SoftwareLicenseEditor({
         />
       </div>
       <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+        <label className="block text-sm font-medium text-neutral-600 mb-1">
           Notes
         </label>
         <textarea
@@ -87,7 +87,7 @@ export function SoftwareLicenseEditor({
           placeholder="Additional notes (optional)"
           disabled={disabled}
           rows={3}
-          className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
+          className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm text-foreground placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
         />
       </div>
     </div>
