@@ -84,12 +84,29 @@ export function YojimboImport() {
         totalImported += batchResult.imported || 0;
       }
 
-      // Send file items in smaller batches (large payloads)
-      for (let i = 0; i < fileItems.length; i += FILE_BATCH_SIZE) {
-        const batch = fileItems.slice(i, i + FILE_BATCH_SIZE);
-        itemsSent += batch.length;
-        setProgress(`Uploading files... ${itemsSent}/${totalItems}`);
-        const batchResult = await sendBatch({ items: batch });
+      // File items: create DB record first (without file_data), then upload file separately
+      for (const fileItem of fileItems) {
+        itemsSent++;
+        setProgress(`Uploading file ${itemsSent}/${totalItems}: ${fileItem.name}`);
+
+        // Strip file_data for the batch call (avoid 413)
+        const { file_data, ...itemWithoutFile } = fileItem;
+        const batchResult = await sendBatch({ items: [itemWithoutFile] });
+
+        if (batchResult.imported > 0 && file_data && batchResult.itemId) {
+          // Upload file via FormData to /api/attachments
+          const binary = atob(file_data);
+          const bytes = new Uint8Array(binary.length);
+          for (let j = 0; j < binary.length; j++) bytes[j] = binary.charCodeAt(j);
+          const blob = new Blob([bytes], { type: fileItem.content_type || "application/octet-stream" });
+          const fileName = fileItem.file_name || `${fileItem.name}.png`;
+
+          const formData = new FormData();
+          formData.append("file", blob, fileName);
+          formData.append("item_id", batchResult.itemId);
+          await fetch("/api/attachments", { method: "POST", body: formData });
+        }
+
         totalImported += batchResult.imported || 0;
       }
 

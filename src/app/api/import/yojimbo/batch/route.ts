@@ -99,6 +99,7 @@ export async function POST(request: Request) {
 
     // Import items batch
     let importedCount = 0;
+    let lastItemId: string | null = null;
 
     if (body.items) {
       for (const yItem of body.items) {
@@ -170,39 +171,6 @@ export async function POST(request: Request) {
             owner_email: yItem.owner_email || "",
             organization: yItem.organization || "",
           }, { onConflict: "item_id" });
-        } else if ((yItem.type === "image" || yItem.type === "pdf") && yItem.file_data) {
-          // Upload binary file to Supabase Storage
-          const buffer = Buffer.from(yItem.file_data, "base64");
-          const fileName = yItem.file_name || `${yItem.name}.${yItem.type === "pdf" ? "pdf" : "jpg"}`;
-          const storagePath = `${user.id}/${itemId}/${Date.now()}-${fileName}`;
-          const contentType = yItem.content_type || (yItem.type === "pdf" ? "application/pdf" : "image/jpeg");
-
-          const { error: uploadError } = await supabase.storage
-            .from("attachments")
-            .upload(storagePath, buffer, { contentType });
-
-          if (!uploadError) {
-            // Remove existing attachments for this item (re-import case)
-            if (existingItem) {
-              const { data: oldAttachments } = await supabase
-                .from("attachments")
-                .select("storage_path")
-                .eq("item_id", itemId);
-              if (oldAttachments?.length) {
-                await supabase.storage.from("attachments").remove(oldAttachments.map(a => a.storage_path));
-                await supabase.from("attachments").delete().eq("item_id", itemId);
-              }
-            }
-
-            await supabase.from("attachments").insert({
-              item_id: itemId,
-              user_id: user.id,
-              file_name: fileName,
-              file_size: buffer.length,
-              content_type: contentType,
-              storage_path: storagePath,
-            });
-          }
         }
 
         // Assign label if present (skip if already assigned)
@@ -223,10 +191,12 @@ export async function POST(request: Request) {
         }
 
         importedCount++;
+        lastItemId = itemId;
       }
     }
 
-    return NextResponse.json({ imported: importedCount });
+    // Return itemId for single-item batches (used for file upload)
+    return NextResponse.json({ imported: importedCount, itemId: lastItemId });
   } catch (error) {
     console.error("Error importing batch:", error);
     return NextResponse.json(
